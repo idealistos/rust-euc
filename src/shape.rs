@@ -41,11 +41,16 @@ impl Point {
         self.hash2(&mut hasher);
         hasher.finish()
     }
+
+    pub fn rotated_90_pos(&self) -> Point {
+        Point(self.1.negate(), self.0)
+    }
 }
 
 pub trait ShapeTrait: Display {
     fn find_intersection_points(&self, s: &Shape) -> [Option<Point>; 2];
     fn contains_point(&self, point: &Point) -> bool;
+    fn get_direction(&self) -> Option<Point>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -84,6 +89,10 @@ impl ShapeTrait for Line {
 
     fn contains_point(&self, point: &Point) -> bool {
         return self.nx * point.0 + self.ny * point.1 == self.d;
+    }
+
+    fn get_direction(&self) -> Option<Point> {
+        Some(Point(self.ny.negate(), self.nx))
     }
 }
 impl Display for Line {
@@ -175,6 +184,10 @@ impl ShapeTrait for Circle {
     fn contains_point(&self, point: &Point) -> bool {
         return (point.0 - self.c.0).sqr() + (point.1 - self.c.1).sqr() == self.r2;
     }
+
+    fn get_direction(&self) -> Option<Point> {
+        None
+    }
 }
 impl Display for Circle {
     fn fmt(&self, f: &mut Formatter) -> Result {
@@ -259,6 +272,10 @@ impl ShapeTrait for Ray {
         line.contains_point(point)
             && !((self.a.0 - point.0) * self.v.0 + (self.a.1 - point.1) * self.v.1)
                 .always_positive()
+    }
+
+    fn get_direction(&self) -> Option<Point> {
+        Some(self.v)
     }
 }
 impl Display for Ray {

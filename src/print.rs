@@ -1,58 +1,14 @@
+use std::collections::HashSet;
+
 use private::PrintStateHelper;
 
-use crate::{Computation, VecLengths, GIVEN};
+use crate::{Computation, VecLengths};
 
 pub trait PrintState {
-    fn print_shapes(&mut self, only_deps_of_shape_index: Option<i32>);
     fn print_state(&mut self);
+    fn print_solution(&mut self);
 }
 impl<'a> PrintState for Computation<'a> {
-    fn print_shapes(&mut self, only_deps_of_shape_index: Option<i32>) {
-        let deps_to_match = match only_deps_of_shape_index {
-            None => None,
-            Some(shape_index) => Some(self.shape_origins[shape_index as usize].deps),
-        };
-        for i in 0..self.shape_origins.len_i32() {
-            let origin = &self.shape_origins[i as usize];
-            match deps_to_match {
-                Some(deps) => {
-                    if self.combine_deps(deps, origin.deps, None) != deps {
-                        continue;
-                    }
-                }
-                _ => (),
-            }
-            let origin = &self.shape_origins[i as usize];
-            let from_part = if origin.point_origin_indices[0] == GIVEN {
-                "".to_string()
-            } else {
-                format!(
-                    " from {} and {} ({})",
-                    self.get_point_name(origin.point_origin_indices[0]),
-                    self.get_point_name(origin.point_origin_indices[1]),
-                    origin.element_or_ref,
-                )
-            };
-            let origin = &self.shape_origins[i as usize];
-            let found_part = if self.shapes_to_find.contains(origin.shape) {
-                " (!!!)"
-            } else {
-                ""
-            };
-            println!(
-                "{}: {} {} [{} actions: {:b} ({:b})]{}{}",
-                i,
-                self.get_shape_name(i),
-                origin.shape,
-                self.get_deps_count(origin.deps),
-                origin.deps,
-                origin.found_shape_mask,
-                from_part,
-                found_part,
-            );
-        }
-    }
-
     fn print_state(&mut self) {
         println!("--- State --- ");
         for i in 0..self.point_origins.len_i32() {
@@ -77,7 +33,7 @@ impl<'a> PrintState for Computation<'a> {
             );
         }
         println!("");
-        self.print_shapes(None);
+        self.print_shapes(HashSet::new());
         println!("");
         for point in self.points_to_find.as_vector() {
             println!("Point yet to find: {}", point,);
@@ -97,24 +53,33 @@ impl<'a> PrintState for Computation<'a> {
             }
         }
     }
+
+    fn print_solution(&mut self) {
+        self.print_state();
+        let deps_list = self.get_solution_deps_list();
+        self.print_shapes(deps_list)
+    }
 }
 
 mod private {
-    use crate::{shape::Shape, Computation, GIVEN};
+    use std::collections::HashSet;
+
+    use crate::{shape::Shape, Computation, GivenOrNewElement, VecLengths, GIVEN};
 
     pub trait PrintStateHelper {
         fn get_shape_name(&self, shape_index: i32) -> String;
         fn get_point_name(&self, point_index: i32) -> String;
+        fn print_shapes(&mut self, only_included_in_deps: HashSet<u64>);
     }
     impl<'a> PrintStateHelper for Computation<'a> {
         fn get_shape_name(&self, shape_index: i32) -> String {
             let origin = &self.shape_origins[shape_index as usize];
-            let prefix = if origin.point_origin_indices[0] == GIVEN {
-                "Given"
-            } else {
-                ""
+            let prefix = match &origin.element_or_ref {
+                GivenOrNewElement::GivenElement { .. } => "Given",
+                GivenOrNewElement::TwoPointElement { .. } => "",
+                GivenOrNewElement::PointAndLineElement { .. } => "",
             };
-            let name = match origin.shape {
+            let name = match origin.get_shape() {
                 Shape::Line(_line) => "Line",
                 Shape::Ray(_ray) => "Ray",
                 Shape::Circle(_circle) => "Circle",
@@ -132,6 +97,55 @@ mod private {
                     self.get_shape_name(origin.shape_origin_indices[0]),
                     self.get_shape_name(origin.shape_origin_indices[1])
                 )
+            }
+        }
+
+        fn print_shapes(&mut self, only_included_in_deps: HashSet<u64>) {
+            for i in 0..self.shape_origins.len_i32() {
+                let mut include = only_included_in_deps.is_empty();
+                for deps in &only_included_in_deps {
+                    let origin = &self.shape_origins[i as usize];
+                    if self.combine_deps(*deps, origin.deps, None) == *deps {
+                        include = true;
+                        break;
+                    }
+                }
+                if !include {
+                    break;
+                }
+                let origin = &self.shape_origins[i as usize];
+                let from_part = match &origin.element_or_ref {
+                    GivenOrNewElement::GivenElement { .. } => "".to_string(),
+                    GivenOrNewElement::TwoPointElement { element: _, action } => format!(
+                        " from {} and {} ({})",
+                        self.get_point_name(action.point_index_1),
+                        self.get_point_name(action.point_index_2),
+                        origin.element_or_ref,
+                    ),
+                    GivenOrNewElement::PointAndLineElement { element: _, action } => format!(
+                        " from {} and {} ({})",
+                        self.get_point_name(action.point_index_1),
+                        self.get_shape_name(action.extra_index),
+                        origin.element_or_ref,
+                    ),
+                };
+                let origin = &self.shape_origins[i as usize];
+                let found_part = if self.shapes_to_find.contains(origin.get_shape()) {
+                    " (!!!)"
+                } else {
+                    ""
+                };
+                println!(
+                    "{}: {} {} [{} actions: {:b} ({:b})]{}{}",
+                    i,
+                    self.get_shape_name(i),
+                    origin.get_shape(),
+                    self.get_deps_count(origin.deps),
+                    origin.deps,
+                    origin.found_shape_mask,
+                    from_part,
+                    found_part,
+                );
             }
         }
     }

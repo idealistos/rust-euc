@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::draw::private::DrawStateHelper;
 use crate::Computation;
 use crate::FInt;
@@ -6,11 +8,12 @@ use crate::VecLengths;
 use svg::Document;
 
 pub trait DrawState {
-    fn draw_state(&mut self, filename: String, hw: f64, only_deps_of_shape_index: Option<i32>);
+    fn draw_state(&mut self, filename: String, hw: f64, only_included_in_deps: HashSet<u64>);
+    fn draw_solution(&mut self, filename: String, hw: f64);
 }
 
 impl<'a> DrawState for Computation<'a> {
-    fn draw_state(&mut self, filename: String, hw: f64, only_deps_of_shape_index: Option<i32>) {
+    fn draw_state(&mut self, filename: String, hw: f64, only_included_in_deps: HashSet<u64>) {
         let colors = [
             "darkgray",
             "blue",
@@ -25,19 +28,17 @@ impl<'a> DrawState for Computation<'a> {
         ];
         let mut document = Document::new().set("viewBox", (0, 0, 800, 800));
 
-        let deps_to_match = match only_deps_of_shape_index {
-            None => None,
-            Some(shape_index) => Some(self.shape_origins[shape_index as usize].deps),
-        };
         for i in 0..self.shape_origins.len_i32() {
-            let shape_origin = &self.shape_origins[i as usize];
-            match deps_to_match {
-                Some(deps) => {
-                    if self.combine_deps(deps, shape_origin.deps, None) != deps {
-                        continue;
-                    }
+            let mut include = only_included_in_deps.is_empty();
+            for deps in &only_included_in_deps {
+                let origin = &self.shape_origins[i as usize];
+                if self.combine_deps(*deps, origin.deps, None) == *deps {
+                    include = true;
+                    break;
                 }
-                _ => (),
+            }
+            if !include {
+                break;
             }
             let shape_origin = &self.shape_origins[i as usize];
             let deps_count = self.get_deps_count(shape_origin.deps);
@@ -47,7 +48,7 @@ impl<'a> DrawState for Computation<'a> {
             } else {
                 (deps_count / 10) + 1
             };
-            document = match shape_origin.shape {
+            document = match shape_origin.get_shape() {
                 Shape::Line(line) => document.add(
                     svg::node::element::Line::new()
                         .set(
@@ -98,14 +99,16 @@ impl<'a> DrawState for Computation<'a> {
             };
         }
         for i in 0..self.point_origins.len_i32() {
-            let point_origin = &self.point_origins[i as usize];
-            match deps_to_match {
-                Some(deps) => {
-                    if self.combine_deps(deps, point_origin.deps, None) != deps {
-                        continue;
-                    }
+            let mut include = false;
+            for deps in &only_included_in_deps {
+                let origin = &self.point_origins[i as usize];
+                if self.combine_deps(*deps, origin.deps, None) == *deps {
+                    include = true;
+                    break;
                 }
-                _ => (),
+            }
+            if !include {
+                break;
             }
             let point_origin = &self.point_origins[i as usize];
             let deps_count = self.get_deps_count(point_origin.deps);
@@ -121,6 +124,11 @@ impl<'a> DrawState for Computation<'a> {
             );
         }
         svg::save(filename, &document).unwrap();
+    }
+
+    fn draw_solution(&mut self, filename: String, hw: f64) {
+        let deps_list = self.get_solution_deps_list();
+        self.draw_state(filename, hw, deps_list)
     }
 }
 
