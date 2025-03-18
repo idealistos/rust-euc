@@ -1,0 +1,61 @@
+<svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+<circle cx="400" cy="400" fill="none" r="80" stroke="darkgray" stroke-width="3"/>
+<line fill="none" stroke="blue" stroke-width="3" x1="400" x2="400" y1="-800" y2="1600"/>
+<circle cx="400" cy="320" fill="none" r="160" stroke="green" stroke-width="3"/>
+<circle cx="400" cy="480" fill="none" r="320" stroke="red" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="320" stroke="red" stroke-width="1"/>
+<circle cx="400" cy="400" fill="none" r="240" stroke="red" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="240" stroke="red" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="160" stroke="red" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="640" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="800" fill="none" r="640" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="79" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="240" fill="none" r="79" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="-160" fill="none" r="320" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="400" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="561" fill="none" r="400" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="160" fill="none" r="480" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="641" fill="none" r="480" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="80" x2="868" y1="-759" y2="1507"/>
+<circle cx="478" cy="387" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="719" x2="-68" y1="-759" y2="1507"/>
+<circle cx="321" cy="387" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="-80" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="-274" x2="1312" y1="-605" y2="1195"/>
+<circle cx="558" cy="340" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="1074" x2="-512" y1="-605" y2="1195"/>
+<circle cx="241" cy="340" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="0" fill="none" r="160" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="-535" x2="1543" y1="-380" y2="820"/>
+<circle cx="538" cy="240" fill="none" r="160" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="1335" x2="-743" y1="-380" y2="820"/>
+<circle cx="261" cy="240" fill="none" r="160" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="400" fill="none" r="160" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="561" fill="none" r="160" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="480" fill="none" r="160" stroke="green" stroke-width="3"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="-96" x2="1103" y1="-699" y2="1379"/>
+<circle cx="400" cy="160" fill="none" r="277" stroke="purple" stroke-width="1"/>
+<circle cx="538" cy="400" fill="none" r="277" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="896" x2="-303" y1="-699" y2="1379"/>
+<circle cx="261" cy="400" fill="none" r="277" stroke="purple" stroke-width="1"/>
+<circle cx="400" cy="480" fill="none" r="80" stroke="blue" stroke-width="3"/>
+<circle cx="469" cy="440" fill="none" r="80" stroke="green" stroke-width="3"/>
+<circle cx="400" cy="480" fill="none" r="138" stroke="red" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="-800" x2="1600" y1="481" y2="480"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="-639" x2="1439" y1="-200" y2="1000"/>
+<circle cx="330" cy="360" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<circle cx="538" cy="480" fill="none" r="240" stroke="purple" stroke-width="1"/>
+<circle cx="480" cy="480" fill="none" r="218" stroke="brown" stroke-width="1"/>
+<circle cx="261" cy="481" fill="none" r="218" stroke="brown" stroke-width="1"/>
+<circle cx="319" cy="481" fill="none" r="58" stroke="brown" stroke-width="1"/>
+<circle cx="261" cy="481" fill="none" r="58" stroke="brown" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="167" x2="744" y1="-778" y2="1551"/>
+<circle cx="400" cy="160" fill="none" r="288" stroke="purple" stroke-width="1"/>
+<circle cx="469" cy="440" fill="none" r="288" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="632" x2="55" y1="-778" y2="1551"/>
+<circle cx="330" cy="440" fill="none" r="288" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="158" x2="758" y1="-776" y2="1546"/>
+<circle cx="400" cy="160" fill="none" r="309" stroke="purple" stroke-width="1"/>
+<circle cx="477" cy="461" fill="none" r="309" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="641" x2="41" y1="-776" y2="1546"/>
+</svg>

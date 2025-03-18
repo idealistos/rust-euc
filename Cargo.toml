@@ -1,0 +1,13 @@
+[package]
+name = "euc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+float_next_after = "1.0.0"
+hashbrown = "0.15.2"
+rayon = "1.10.0"
+stacker = "0.1.19"
+strum = "0.27.1"
+strum_macros = "0.27.1"
+svg = "0.18.0"

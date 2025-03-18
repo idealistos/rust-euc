@@ -1,0 +1,303 @@
+            let shape_origin = &self.shape_origins[i as usize];
+            let deps_count =
+                self.get_combined_deps_count(combined_deps_with_index, shape_origin.deps);
+            let shape_origin = &self.shape_origins[i as usize];
+            let combined_mask = shape_origin.found_shape_mask | found_shape_mask;
+            let reserved = self.shape_to_find_mask_by_shape.len_u32() - combined_mask.count_ones();
+            if deps_count + reserved <= self.problem.action_count {
+
+
+    fn get_combined_deps_count(&self, deps1: u64, deps2: u64) -> u32 {
+        let combined_mask = deps1 | deps2;
+        let lower_mask = combined_mask & ((1u64 << 40) - 1);
+        if combined_mask == lower_mask {
+            return lower_mask.count_ones();
+        }
+        let deps_vec_1 = &self.deps_combinations[(deps1 >> 40) as usize];
+        let deps_vec_2 = &self.deps_combinations[(deps2 >> 40) as usize];
+        let mut same_count = 0;
+        for i1 in deps_vec_1 {
+            for i2 in deps_vec_2 {
+                if i1 == i2 {
+                    same_count += 1;
+                }
+            }
+        }
+        lower_mask.count_ones() + deps_vec_1.len_u32() + deps_vec_2.len_u32() - same_count
+    }
+
+
+
+        for i in 0..index {
+            let point_origin = &self.point_origins[i as usize];
+            let deps_count = self.get_combined_deps_count(combined_deps, point_origin.deps);
+            let found_shape_mask_1 = found_shape_mask | point_origin.found_shape_mask;
+            let reserved =
+                self.shape_to_find_mask_by_shape.len_u32() - found_shape_mask_1.count_ones();
+            if deps_count + reserved < self.problem.action_count - 1 {
+
+
+
+use crate::{
+    element::{CircleCP, Element, LineAB, LineAV, RayAV},
+    fint::FInt,
+    shape::{Point, Ray},
+};
+
+fn pt(x: f64, y: f64) -> Point {
+    Point(FInt::new(x), FInt::new(y))
+}
+
+pub struct ProblemDefinition {
+    pub given_elements: Vec<Element>,
+    pub elements_to_find: Vec<Element>,
+    pub action_count: u32,
+}
+impl ProblemDefinition {
+    // Easy problem, solved
+    fn midpoint_problem_1_3() -> ProblemDefinition {
+        let p1 = pt(-1.0, 0.0);
+        let p2 = pt(1.0, 0.0);
+        let px = pt(0.0, 0.0);
+        ProblemDefinition {
+            given_elements: vec![Element::Point(p1), Element::Point(p2)],
+            elements_to_find: vec![Element::Point(px)],
+            action_count: 4,
+        }
+    }
+
+    // Apparently can't be solved in 7 actions
+    fn inscribed_square_problem_1_7() -> ProblemDefinition {
+        let c = pt(0.0, 0.0)
+        let p0 = Point(FInt::new(0.0), FInt::new(-1.0));
+        let p1 = Point(FInt::new(1.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(0.0), FInt::new(1.0));
+        let p3 = Point(FInt::new(-1.0), FInt::new(0.0));
+        let circle = CircleCP { c, p: p0 };
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(circle),
+                Element::Point(p0),
+                Element::Point(c),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: p0, b: p1 }),
+                Element::LineAB(LineAB { a: p1, b: p2 }),
+                Element::LineAB(LineAB { a: p2, b: p3 }),
+                Element::LineAB(LineAB { a: p3, b: p0 }),
+            ],
+            action_count: 7,
+        }
+    }
+
+    // Apparently can't be solved in 7 actions
+    fn inscribed_square_problem_1_7_extended() -> ProblemDefinition {
+        let c = Point(FInt::new(0.0), FInt::new(0.0));
+        let p0 = Point(FInt::new(0.0), FInt::new(-1.0));
+        let p1 = Point(FInt::new(1.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(0.0), FInt::new(1.0));
+        let p3 = Point(FInt::new(-1.0), FInt::new(0.0));
+        let circle = CircleCP { c, p: p0 };
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(circle),
+                Element::Point(p0),
+                Element::Point(c),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: p0, b: p1 }),
+                Element::LineAB(LineAB { a: p1, b: p2 }),
+                Element::LineAB(LineAB { a: p2, b: p3 }),
+                Element::LineAB(LineAB { a: p3, b: p0 }),
+                Element::Point(p1),
+                Element::Point(p2),
+                Element::Point(p3),
+            ],
+            action_count: 8,
+        }
+    }
+
+    // Apparently can't be solved in 3 actions
+    fn tangent_to_circle_at_point_2_8() -> ProblemDefinition {
+        let c = Point(FInt::new(0.0), FInt::new(0.0));
+        let p0 = Point(FInt::new(1.0), FInt::new(0.0));
+        let circle = CircleCP { c, p: p0 };
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(circle),
+                Element::Point(p0),
+                Element::Point(c),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV {
+                a: p0,
+                v: Point(FInt::new(0.0), FInt::new(1.0)),
+            })],
+            action_count: 3,
+        }
+    }
+
+    // Apparently can't be solved in 6 actions, only in 7
+    fn equilateral_triangle_in_circle_problem_4_4() -> ProblemDefinition {
+        let c = Point(FInt::new(0.0), FInt::new(0.0));
+        let p = Point(FInt::new(1.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(0.6), FInt::new(0.8));
+        let xp1 = Point(FInt::new(-0.5), FInt::new(0.75f64.sqrt()));
+        let xp2 = Point(FInt::new(-0.5), FInt::new(-(0.75f64.sqrt())));
+        let circle = CircleCP { c, p };
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(circle),
+                Element::Point(p),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: xp1, b: p }),
+                Element::LineAB(LineAB { a: xp2, b: p }),
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::Point(xp1),
+                Element::Point(xp2),
+            ],
+            action_count: 6,
+        }
+    }
+
+    fn angle_of_60_4_2() -> ProblemDefinition {
+        let v = Point(FInt::new(0.0), FInt::new(0.75f64.sqrt()));
+        let p = Point(FInt::new(0.23456), FInt::new(0.0));
+        let line = LineAV {
+            a: p,
+            v: Point(FInt::new(1.0), FInt::new(0.0)),
+        };
+        let xp = Point(FInt::new(-0.5), FInt::new(0.0));
+
+        ProblemDefinition {
+            given_elements: vec![Element::LineAV(line), Element::Point(v), Element::Point(p)],
+            elements_to_find: vec![Element::LineAB(LineAB { a: v, b: xp }), Element::Point(xp)],
+            action_count: 4,
+        }
+    }
+
+    // Solved
+    fn circumscribed_equilateral_triangle_4_3() -> ProblemDefinition {
+        let c = Point(FInt::new(0.0), FInt::new(0.0));
+        let p = Point(FInt::new(0.0), FInt::new(-1.0));
+        let x1 = Point(FInt::new(0.0), FInt::new(2.0));
+        let x2 = Point(FInt::new(-(3f64.sqrt())), FInt::new(-1.0));
+        let x3 = Point(FInt::new(3f64.sqrt()), FInt::new(-1.0));
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p }),
+                Element::Point(c),
+                Element::Point(p),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: x1, b: x2 }),
+                Element::LineAB(LineAB { a: x2, b: x3 }),
+                Element::LineAB(LineAB { a: x3, b: x1 }),
+                Element::Point(x1),
+                Element::Point(x2),
+                Element::Point(x3),
+            ],
+            action_count: 6,
+        }
+    }
+
+    // Solved
+    fn line_equidistant_from_two_points_5_3() -> ProblemDefinition {
+        // let p1 = Point(FInt::new(-0.3), FInt::new(0.0));
+        // let p2 = Point(FInt::new(0.5), FInt::new(0.2));
+        // let p3 = Point(FInt::new(0.1), FInt::new(0.7));
+        // let x_line = LineAV {
+        //     a: p3,
+        //     v: Point(FInt::new(0.8), FInt::new(0.2)),
+        // };
+        let p1 = Point(FInt::new(-1.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(1.0), FInt::new(0.0));
+        let p3 = Point(FInt::new(0.2345), FInt::new(1.0));
+        let x_line = LineAV {
+            a: p3,
+            v: Point(FInt::new(1.0), FInt::new(0.0)),
+        };
+
+        ProblemDefinition {
+            given_elements: vec![Element::Point(p1), Element::Point(p2), Element::Point(p3)],
+            elements_to_find: vec![Element::LineAV(x_line)],
+            action_count: 4,
+        }
+    }
+
+    // Solved - required reducing the number of actions by 1
+    // (not all shapes are constructed)
+    fn shift_angle_5_6() -> ProblemDefinition {
+        let p1 = Point(FInt::new(0.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(3.0), FInt::new(1.2345));
+        let v1 = Point(FInt::new(1.0), FInt::new(0.0));
+        let v2 = Point(FInt::new(0.6), FInt::new(0.8));
+        let ray1 = RayAV { a: p1, v: v1 };
+        let ray2 = RayAV { a: p1, v: v2 };
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::RayAV(ray1),
+                Element::RayAV(ray2),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAV(LineAV { a: p2, v: v1 }),
+                Element::LineAV(LineAV { a: p2, v: v2 }),
+            ],
+            action_count: 5,
+        }
+    }
+
+    fn line_equidistant_from_two_lines_5_7() -> ProblemDefinition {
+        let p1 = Point(FInt::new(0.0), FInt::new(0.0));
+        let p2 = Point(FInt::new(0.2345), FInt::new(2.0));
+        let v = Point(FInt::new(1.0), FInt::new(0.0));
+        let px = Point(FInt::new(0.0), FInt::new(1.0));
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: p1, v }),
+                Element::LineAV(LineAV { a: p2, v }),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: px, v })],
+            action_count: 5,
+        }
+    }
+
+    fn circumscribed_square_5_8() -> ProblemDefinition {
+        let c = Point(FInt::new(0.0), FInt::new(0.0));
+        let p = Point(FInt::new(0.0), FInt::new(1.0));
+        let p2 = Point(FInt::new(0.0), FInt::new(-2.12345));
+        let v = Point(FInt::new(1.0), FInt::new(0.0));
+        let px = Point(FInt::new(0.0), FInt::new(1.0));
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p }),
+                Element::LineAV(LineAV { a: p2, v }),
+                Element::Point(c),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: px, v })],
+            action_count: 5,
+        }
+    }
+
+    pub fn get_problem() -> ProblemDefinition {
+        // Solved problems
+        // Self::midpoint_problem_1_3()
+        // Self::angle_of_60_4_2()
+        Self::circumscribed_equilateral_triangle_4_3()
+        // Self::line_equidistant_from_two_points_5_3()
+        // Self::shift_angle_5_6()
+        // Self::line_equidistant_from_two_lines_5_7()
+    }
+}
