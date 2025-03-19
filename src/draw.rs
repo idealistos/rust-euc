@@ -38,7 +38,7 @@ impl<'a> DrawState for Computation<'a> {
                 }
             }
             if !include {
-                break;
+                continue;
             }
             let shape_origin = &self.shape_origins[i as usize];
             let deps_count = self.get_deps_count(shape_origin.deps);
@@ -108,7 +108,7 @@ impl<'a> DrawState for Computation<'a> {
                 }
             }
             if !include {
-                break;
+                continue;
             }
             let point_origin = &self.point_origins[i as usize];
             let deps_count = self.get_deps_count(point_origin.deps);

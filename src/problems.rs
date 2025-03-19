@@ -208,6 +208,36 @@ impl ProblemDefinition {
         }
     }
 
+    fn equilateral_triangle_in_circle_problem_4_4_adv() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(1.0, 0.0);
+        let p2 = pt(0.6, 0.8);
+        let xp1 = pt(-0.5, 0.75f64.sqrt());
+        let xp2 = pt(-0.5, -(0.75f64.sqrt()));
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p }),
+                Element::Point(p),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: xp1, b: p }),
+                Element::LineAB(LineAB { a: xp2, b: p }),
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::Point(xp1),
+                Element::Point(xp2),
+            ],
+            action_count: 5,
+            action_types: vec![
+                ActionType::LINE,
+                ActionType::CIRCLE12,
+                ActionType::CIRCLE21,
+                ActionType::MID_PERP,
+                ActionType::PERP,
+            ],
+        }
+    }
+
     fn angle_of_60_4_2() -> ProblemDefinition {
         let p0 = pt(0.0, 0.75f64.sqrt());
         let p = pt(0.23456, 0.0);
@@ -369,8 +399,8 @@ impl ProblemDefinition {
         let v = pt(1.0, 0.0);
         let px1 = pt(1.0, 1.0);
         let px2 = pt(1.0, -1.0);
-        let px3 = pt(-1.0, 1.0);
-        let px4 = pt(-1.0, -1.0);
+        let px3 = pt(-1.0, -1.0);
+        let px4 = pt(-1.0, 1.0);
 
         ProblemDefinition {
             given_elements: vec![
@@ -503,6 +533,108 @@ impl ProblemDefinition {
         }
     }
 
+    fn symmetry_of_four_lines_6_10() -> ProblemDefinition {
+        let o = pt(0.0, 0.0);
+        let v1 = pt(1.0, 0.0);
+        let v2 = pt(0.6, 0.8);
+        let v3 = pt(-1.0, 1.0);
+        let vx = pt(-0.2, 1.4);
+        let pt = pt(1.0, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: o, v: v1 }),
+                Element::LineAV(LineAV { a: o, v: v2 }),
+                Element::LineAV(LineAV { a: o, v: v3 }),
+                Element::Point(pt),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: o, v: vx })],
+            action_count: 4,
+            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+        }
+    }
+
+    fn symmetry_of_four_lines_6_10_adv() -> ProblemDefinition {
+        let o = pt(0.0, 0.0);
+        let v1 = pt(1.0, 0.0);
+        let v2 = pt(0.6, 0.8);
+        let v3 = pt(-1.0, 1.01);
+        let vx = pt(-1.0 - 0.04, 7.03);
+        let pt = pt(1.0, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: o, v: v1 }),
+                Element::LineAV(LineAV { a: o, v: v2 }),
+                Element::LineAV(LineAV { a: o, v: v3 }),
+                Element::Point(pt),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: o, v: vx })],
+            action_count: 3,
+            action_types: vec![
+                ActionType::LINE,
+                ActionType::CIRCLE12,
+                ActionType::CIRCLE21,
+                ActionType::MID_PERP,
+                ActionType::PERP,
+            ],
+        }
+    }
+
+    fn parallelogram_by_three_midpoints_6_11() -> ProblemDefinition {
+        let xp1 = pt(0.0, 0.0);
+        let xp2 = pt(0.6, 0.8);
+        let xp3 = pt(1.62, 0.8);
+        let xp4 = pt(1.02, 0.0);
+        let m23 = pt(1.11, 0.8);
+        let m34 = pt(1.32, 0.4);
+        let m41 = pt(0.51, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(m23),
+                Element::Point(m34),
+                Element::Point(m41),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::LineAB(LineAB { a: xp2, b: xp3 }),
+                Element::LineAB(LineAB { a: xp3, b: xp4 }),
+                Element::LineAB(LineAB { a: xp4, b: xp1 }),
+            ],
+            action_count: 7, // Actually 10
+            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+        }
+    }
+
+    fn parallelogram_by_three_midpoints_6_11_adv() -> ProblemDefinition {
+        let xp1 = pt(0.0, 0.0);
+        let xp2 = pt(0.6, 0.8);
+        let xp3 = pt(1.62, 0.8);
+        let xp4 = pt(1.02, 0.0);
+        let m23 = pt(1.11, 0.8);
+        let m34 = pt(1.32, 0.4);
+        let m41 = pt(0.51, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(m23),
+                Element::Point(m34),
+                Element::Point(m41),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::LineAB(LineAB { a: xp2, b: xp3 }),
+                Element::LineAB(LineAB { a: xp3, b: xp4 }),
+                Element::LineAB(LineAB { a: xp4, b: xp1 }),
+            ],
+            action_count: 7,
+            action_types: vec![
+                ActionType::LINE,
+                ActionType::CIRCLE12,
+                ActionType::CIRCLE21,
+                ActionType::MID_PERP,
+                ActionType::PERP,
+            ],
+        }
+    }
+
     fn chord_trisection_10_8() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
@@ -525,7 +657,7 @@ impl ProblemDefinition {
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::square_by_opposite_midpoints_4_9_adv()
+        Self::parallelogram_by_three_midpoints_6_11_adv()
 
         // Self::midpoint_problem_1_3_with_midperp()
 
@@ -535,6 +667,9 @@ impl ProblemDefinition {
 
         // Unclear:
         // Self::square_in_square_5_9()
+
+        // Finds a solution with too many actions
+        // Self::parallelogram_by_three_midpoints_6_11()
 
         // Solved problems
         // Self::midpoint_problem_1_3()
@@ -547,5 +682,9 @@ impl ProblemDefinition {
         // Self::copy_segment_6_3()
         // Self::chord_trisection_10_8()
         // Self::tangent_to_circle_at_point_2_8_with_perp()
+        // Self::square_by_opposite_midpoints_4_9_adv()
+        // Self::equilateral_triangle_in_circle_problem_4_4_adv()
+        // Self::symmetry_of_four_lines_6_10()
+        // Self::symmetry_of_four_lines_6_10_adv()
     }
 }

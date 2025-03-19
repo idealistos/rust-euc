@@ -57,6 +57,12 @@ impl<'a> PrintState for Computation<'a> {
     fn print_solution(&mut self) {
         self.print_state();
         let deps_list = self.get_solution_deps_list();
+        let mut deps_vec: Vec<&u64> = deps_list.iter().collect();
+        deps_vec.sort();
+        println!("Solution deps:");
+        for deps in deps_vec {
+            println!("{:b}", deps);
+        }
         self.print_shapes(deps_list)
     }
 }
@@ -111,7 +117,7 @@ mod private {
                     }
                 }
                 if !include {
-                    break;
+                    continue;
                 }
                 let origin = &self.shape_origins[i as usize];
                 let from_part = match &origin.element_or_ref {

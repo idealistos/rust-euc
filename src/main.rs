@@ -936,13 +936,13 @@ impl<'a> Computation<'a> {
             {
                 println!("=== Printing solution! ===");
                 self.print_solution();
-                self.draw_solution("solution.svg".to_string(), 5.0);
+                self.draw_solution("solution.svg".to_string(), 2.0);
                 println!("Finished in {} seconds", time.elapsed().unwrap().as_secs());
                 return;
             }
             if i == 10 || i == 30 || i == 120 || i == 300 {
                 self.print_state();
-                self.draw_state(format!("image{}.svg", i), 5.0, HashSet::new());
+                self.draw_state(format!("image{}.svg", i), 2.0, HashSet::new());
             }
             if i % 10 == 0 {
                 println!(
@@ -956,8 +956,8 @@ impl<'a> Computation<'a> {
                     self.found_shapes.len(),
                     self.queue.len(),
                     self.deps_combinations.len(),
-                    self.deps_indices_by_hashes.len(),
-                    self.queue.peek().unwrap().priority,
+                    self.deps_indices_by_hashes.len(), 
+                    if self.queue.is_empty() { 0 } else { self.queue.peek().unwrap().priority},
                     time.elapsed().unwrap().as_secs(),
                 );
             }
