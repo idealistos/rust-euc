@@ -143,7 +143,6 @@ impl ProblemDefinition {
         }
     }
 
-    // Apparently can't be solved in 3 actions
     fn tangent_to_circle_at_point_2_8() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p0 = pt(1.0, 0.0);
@@ -156,7 +155,7 @@ impl ProblemDefinition {
                 Element::Point(c),
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: p0, v })],
-            action_count: 3,
+            action_count: 4, // Looks like it can't be solved in 3 actions
             action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
         }
     }
@@ -183,11 +182,10 @@ impl ProblemDefinition {
         }
     }
 
-    // Apparently can't be solved in 6 actions, only in 7
     fn equilateral_triangle_in_circle_problem_4_4() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
-        let p2 = pt(0.6, 0.8);
+        let p2 = pt(0.1, 0.99f64.sqrt());
         let xp1 = pt(-0.5, 0.75f64.sqrt());
         let xp2 = pt(-0.5, -(0.75f64.sqrt()));
         ProblemDefinition {
@@ -203,7 +201,7 @@ impl ProblemDefinition {
                 Element::Point(xp1),
                 Element::Point(xp2),
             ],
-            action_count: 6,
+            action_count: 7, // Unclear whether it can be solved in 6 actions
             action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
         }
     }
@@ -635,6 +633,69 @@ impl ProblemDefinition {
         }
     }
 
+    fn annulus_7_2() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(1.0, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(c),
+                Element::Point(p),
+                Element::CircleCP(CircleCP { c, p }),
+            ],
+            elements_to_find: vec![Element::CircleCR(CircleCR {
+                c,
+                r: FInt::new(0.5).sqrt(),
+            })],
+            action_count: 5,
+            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+        }
+    }
+
+    fn annulus_7_2_adv() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(1.0, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(c),
+                Element::Point(p),
+                Element::CircleCP(CircleCP { c, p }),
+            ],
+            elements_to_find: vec![Element::CircleCR(CircleCR {
+                c,
+                r: FInt::new(0.5).sqrt(),
+            })],
+            action_count: 4,
+            action_types: vec![
+                ActionType::LINE,
+                ActionType::CIRCLE12,
+                ActionType::CIRCLE21,
+                ActionType::MID_PERP,
+                ActionType::PERP,
+            ],
+        }
+    }
+
+    fn herons_problem_7_5() -> ProblemDefinition {
+        let c = pt(0.12345, 0.0);
+        let v = pt(1.0, 0.0);
+        let x = pt(0.0, 0.0);
+        let p1 = pt(0.6, 0.8);
+        let p2 = pt(-0.606, 0.808);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: c, v }),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: x, b: p1 }),
+                Element::LineAB(LineAB { a: x, b: p2 }),
+            ],
+            action_count: 5, // Looks like it can't be done in 4 actions
+            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+        }
+    }
+
     fn chord_trisection_10_8() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
@@ -657,7 +718,7 @@ impl ProblemDefinition {
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::parallelogram_by_three_midpoints_6_11_adv()
+        Self::equilateral_triangle_in_circle_problem_4_4()
 
         // Self::midpoint_problem_1_3_with_midperp()
 
@@ -670,6 +731,12 @@ impl ProblemDefinition {
 
         // Finds a solution with too many actions
         // Self::parallelogram_by_three_midpoints_6_11()
+        // Self::parallelogram_by_three_midpoints_6_11_adv()
+
+        // Solved with one more action (required solution probably doesn't exist)
+        // Self::tangent_to_circle_at_point_2_8()
+        // Self::equilateral_triangle_in_circle_problem_4_4()
+        // Self::herons_problem_7_5()
 
         // Solved problems
         // Self::midpoint_problem_1_3()
@@ -686,5 +753,7 @@ impl ProblemDefinition {
         // Self::equilateral_triangle_in_circle_problem_4_4_adv()
         // Self::symmetry_of_four_lines_6_10()
         // Self::symmetry_of_four_lines_6_10_adv()
+        // Self::annulus_7_2()
+        // Self::annulus_7_2_adv()
     }
 }

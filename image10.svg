@@ -1,12 +1,12 @@
 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
-<line fill="none" stroke="blue" stroke-width="3" x1="82" x2="1197" y1="-788" y2="1336"/>
-<line fill="none" stroke="green" stroke-width="3" x1="1444" x2="-680" y1="-191" y2="923"/>
-<line fill="none" stroke="green" stroke-width="3" x1="1486" x2="-638" y1="-111" y2="1003"/>
-<line fill="none" stroke="green" stroke-width="3" x1="1484" x2="-640" y1="-115" y2="999"/>
-<circle cx="622" cy="240" fill="none" r="85" stroke="red" stroke-width="1"/>
-<circle cx="661" cy="317" fill="none" r="85" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="1464" x2="-660" y1="-153" y2="961"/>
-<circle cx="664" cy="320" fill="none" r="4" stroke="red" stroke-width="1"/>
-<circle cx="661" cy="317" fill="none" r="4" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="1485" x2="-639" y1="-113" y2="1001"/>
+<circle cx="400" cy="400" fill="none" r="200" stroke="darkgray" stroke-width="3"/>
+<line fill="none" stroke="blue" stroke-width="3" x1="-294" x2="1314" y1="-589" y2="1190"/>
+<circle cx="600" cy="400" fill="none" r="268" stroke="blue" stroke-width="3"/>
+<line fill="none" stroke="green" stroke-width="3" x1="1314" x2="-294" y1="-390" y2="1389"/>
+<circle cx="420" cy="599" fill="none" r="268" stroke="green" stroke-width="3"/>
+<circle cx="780" cy="599" fill="none" r="268" stroke="red" stroke-width="1"/>
+<circle cx="780" cy="202" fill="none" r="268" stroke="red" stroke-width="1"/>
+<line fill="none" stroke="red" stroke-width="1" x1="1595" x2="-791" y1="300" y2="540"/>
+<circle cx="600" cy="400" fill="none" r="397" stroke="red" stroke-width="1"/>
+<circle cx="203" cy="440" fill="none" r="397" stroke="red" stroke-width="1"/>
 </svg>
