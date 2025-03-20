@@ -388,15 +388,35 @@ impl WithTwoHashes for Shape {
 }
 impl Display for Shape {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.as_trait().fmt(f)
+        match self {
+            Shape::Line(line) => line.fmt(f),
+            Shape::Ray(ray) => ray.fmt(f),
+            Shape::Circle(circle) => circle.fmt(f),
+        }
     }
 }
-impl Shape {
-    pub fn as_trait(&self) -> &dyn ShapeTrait {
+impl ShapeTrait for Shape {
+    fn find_intersection_points(&self, shape: &Shape) -> [Option<Point>; 2] {
         match self {
-            Shape::Line(line) => line,
-            Shape::Ray(ray) => ray,
-            Shape::Circle(circle) => circle,
+            Shape::Line(line) => line.find_intersection_points(shape),
+            Shape::Ray(ray) => ray.find_intersection_points(shape),
+            Shape::Circle(circle) => circle.find_intersection_points(shape),
+        }
+    }
+
+    fn contains_point(&self, point: &Point) -> bool {
+        match self {
+            Shape::Line(line) => line.contains_point(point),
+            Shape::Ray(ray) => ray.contains_point(point),
+            Shape::Circle(circle) => circle.contains_point(point),
+        }
+    }
+
+    fn get_direction(&self) -> Option<Point> {
+        match self {
+            Shape::Line(line) => line.get_direction(),
+            Shape::Ray(ray) => ray.get_direction(),
+            Shape::Circle(_circle) => None,
         }
     }
 }

@@ -24,6 +24,17 @@ pub enum PointAndLineActionType {
     Last,
 }
 
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+// pub enum ThreePointActionType {
+//     CircleCAB,
+//     CircleACB,
+//     CircleABC,
+//     BisectorCAB,
+//     BisectorACB,
+//     BisectorABC,
+//     Last,
+// }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ActionType {
     TwoPointActionType(TwoPointActionType),
@@ -36,30 +47,56 @@ impl ActionType {
     const MID_PERP: Self = ActionType::TwoPointActionType(TwoPointActionType::MidPerp);
     const PERP: Self = ActionType::PointAndLineActionType(PointAndLineActionType::Perp);
     const PAR: Self = ActionType::PointAndLineActionType(PointAndLineActionType::Par);
-
-    pub fn point_count(self) -> u32 {
-        match self {
-            Self::TwoPointActionType(_) => 2,
-            Self::PointAndLineActionType(_) => 1,
-        }
-    }
-
-    pub fn line_count(self) -> u32 {
-        match self {
-            Self::TwoPointActionType(_) => 0,
-            Self::PointAndLineActionType(_) => 1,
-        }
-    }
 }
 
 pub struct ProblemDefinition {
     pub given_elements: Vec<Element>,
     pub elements_to_find: Vec<Element>,
     pub action_count: u32,
-    pub action_types: Vec<ActionType>,
+    pub action_types: &'static [ActionType],
 }
 #[allow(dead_code)]
 impl ProblemDefinition {
+    const BASIC: ProblemDefinition = ProblemDefinition {
+        given_elements: vec![],
+        elements_to_find: vec![],
+        action_count: 0,
+        action_types: &[ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+    };
+
+    const LIMITED_ADVANCED: ProblemDefinition = ProblemDefinition {
+        given_elements: vec![],
+        elements_to_find: vec![],
+        action_count: 0,
+        action_types: &[
+            ActionType::LINE,
+            ActionType::CIRCLE12,
+            ActionType::CIRCLE21,
+            ActionType::MID_PERP,
+            ActionType::PERP,
+        ],
+    };
+
+    const ADVANCED: ProblemDefinition = ProblemDefinition {
+        given_elements: vec![],
+        elements_to_find: vec![],
+        action_count: 0,
+        action_types: &[
+            ActionType::LINE,
+            ActionType::CIRCLE12,
+            ActionType::CIRCLE21,
+            ActionType::MID_PERP,
+            ActionType::PERP,
+            ActionType::PAR,
+        ],
+    };
+
+    pub fn has_point_and_line_actions(&self) -> bool {
+        self.action_types
+            .iter()
+            .any(|action_type| matches!(action_type, ActionType::PointAndLineActionType(_)))
+    }
+
     // Easy problem, solved
     fn midpoint_problem_1_3() -> ProblemDefinition {
         let p1 = pt(-1.0, 0.0);
@@ -69,7 +106,7 @@ impl ProblemDefinition {
             given_elements: vec![Element::Point(p1), Element::Point(p2)],
             elements_to_find: vec![Element::Point(px)],
             action_count: 4,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -81,7 +118,7 @@ impl ProblemDefinition {
             given_elements: vec![Element::Point(p1), Element::Point(p2)],
             elements_to_find: vec![Element::Point(px)],
             action_count: 2,
-            action_types: vec![
+            action_types: &[
                 ActionType::LINE,
                 ActionType::CIRCLE12,
                 ActionType::CIRCLE21,
@@ -111,7 +148,7 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: p3, b: p0 }),
             ],
             action_count: 7,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -139,7 +176,7 @@ impl ProblemDefinition {
                 Element::Point(p3),
             ],
             action_count: 8,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -156,7 +193,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: p0, v })],
             action_count: 4, // Looks like it can't be solved in 3 actions
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -173,7 +210,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: p0, v })],
             action_count: 2,
-            action_types: vec![
+            action_types: &[
                 ActionType::LINE,
                 ActionType::CIRCLE12,
                 ActionType::CIRCLE21,
@@ -202,7 +239,7 @@ impl ProblemDefinition {
                 Element::Point(xp2),
             ],
             action_count: 7, // Unclear whether it can be solved in 6 actions
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -226,13 +263,7 @@ impl ProblemDefinition {
                 Element::Point(xp2),
             ],
             action_count: 5,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -250,7 +281,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAB(LineAB { a: p0, b: xp }), Element::Point(xp)],
             action_count: 4,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -268,13 +299,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAB(LineAB { a: p0, b: xp }), Element::Point(xp)],
             action_count: 3,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -301,7 +326,7 @@ impl ProblemDefinition {
                 Element::Point(x3),
             ],
             action_count: 6,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -322,13 +347,7 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: ux2, b: lx2 }),
             ],
             action_count: 6,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -343,7 +362,7 @@ impl ProblemDefinition {
             given_elements: vec![Element::Point(p1), Element::Point(p2), Element::Point(p3)],
             elements_to_find: vec![Element::LineAV(LineAV { a: p3, v })],
             action_count: 4,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -367,7 +386,7 @@ impl ProblemDefinition {
                 Element::LineAV(LineAV { a: p2, v: v2 }),
             ],
             action_count: 5,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -386,7 +405,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: px, v })],
             action_count: 5,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -418,7 +437,7 @@ impl ProblemDefinition {
                 Element::Point(px4),
             ],
             action_count: 11,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -446,7 +465,7 @@ impl ProblemDefinition {
                 Element::Point(px),
             ],
             action_count: 6,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -483,7 +502,7 @@ impl ProblemDefinition {
                 Element::Point(px4),
             ],
             action_count: 7,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -506,7 +525,7 @@ impl ProblemDefinition {
                 Element::Point(px2),
             ],
             action_count: 5,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -527,7 +546,7 @@ impl ProblemDefinition {
                 Element::Point(p1px),
             ],
             action_count: 5,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -547,7 +566,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: o, v: vx })],
             action_count: 4,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -567,13 +586,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: o, v: vx })],
             action_count: 3,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -598,7 +611,7 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: xp4, b: xp1 }),
             ],
             action_count: 7, // Actually 10
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -623,13 +636,7 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: xp4, b: xp1 }),
             ],
             action_count: 7,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -647,7 +654,7 @@ impl ProblemDefinition {
                 r: FInt::new(0.5).sqrt(),
             })],
             action_count: 5,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
@@ -665,13 +672,7 @@ impl ProblemDefinition {
                 r: FInt::new(0.5).sqrt(),
             })],
             action_count: 4,
-            action_types: vec![
-                ActionType::LINE,
-                ActionType::CIRCLE12,
-                ActionType::CIRCLE21,
-                ActionType::MID_PERP,
-                ActionType::PERP,
-            ],
+            ..Self::LIMITED_ADVANCED
         }
     }
 
@@ -680,19 +681,56 @@ impl ProblemDefinition {
         let v = pt(1.0, 0.0);
         let x = pt(0.0, 0.0);
         let p1 = pt(0.6, 0.8);
-        let p2 = pt(-0.606, 0.808);
+        let p2 = pt(-0.72, 0.96);
         ProblemDefinition {
             given_elements: vec![
                 Element::LineAV(LineAV { a: c, v }),
                 Element::Point(p1),
                 Element::Point(p2),
+                Element::Point(c),
             ],
             elements_to_find: vec![
                 Element::LineAB(LineAB { a: x, b: p1 }),
                 Element::LineAB(LineAB { a: x, b: p2 }),
             ],
-            action_count: 5, // Looks like it can't be done in 4 actions
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            action_count: 4,
+            ..Self::BASIC
+        }
+    }
+
+    fn circle_tangent_to_three_lines_7_8() -> ProblemDefinition {
+        let cx = pt(0.0, 0.0);
+        let p = pt(0.0, -1.0);
+        let v = pt(1.0, 0.0);
+        let v2 = pt(0.8, 0.6);
+        let px1 = pt(-0.6, 0.8);
+        let px2 = pt(0.6, -0.8);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: p, v }),
+                Element::LineAV(LineAV { a: px1, v: v2 }),
+                Element::LineAV(LineAV { a: px2, v: v2 }),
+            ],
+            elements_to_find: vec![Element::CircleCP(CircleCP { c: cx, p })],
+            action_count: 6,
+            ..Self::BASIC
+        }
+    }
+
+    fn segment_by_midpoint_7_9_adv() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(1.0, 0.5);
+        let p1 = pt(1.0, 0.0);
+        let px = pt(1.234, 1.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAB(LineAB { a: c, b: p1 }),
+                Element::LineAB(LineAB { a: c, b: px }),
+                Element::Point(p),
+            ],
+            elements_to_find: vec![Element::LineAB(LineAB { a: p, b: px })],
+            action_count: 3,
+            ..Self::ADVANCED
         }
     }
 
@@ -713,14 +751,13 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: p, v })],
             action_count: 4,
-            action_types: vec![ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+            ..Self::BASIC
         }
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::equilateral_triangle_in_circle_problem_4_4()
-
-        // Self::midpoint_problem_1_3_with_midperp()
+        Self::chord_trisection_10_8()
+        // Self::circle_tangent_to_three_lines_7_8()
 
         // Too large:
         // Self::circumscribed_square_5_8()
@@ -736,7 +773,6 @@ impl ProblemDefinition {
         // Solved with one more action (required solution probably doesn't exist)
         // Self::tangent_to_circle_at_point_2_8()
         // Self::equilateral_triangle_in_circle_problem_4_4()
-        // Self::herons_problem_7_5()
 
         // Solved problems
         // Self::midpoint_problem_1_3()
@@ -755,5 +791,7 @@ impl ProblemDefinition {
         // Self::symmetry_of_four_lines_6_10_adv()
         // Self::annulus_7_2()
         // Self::annulus_7_2_adv()
+        // Self::herons_problem_7_5() - added an unneeded action
+        // Self::segment_by_midpoint_7_9_adv()
     }
 }

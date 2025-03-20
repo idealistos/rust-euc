@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use private::PrintStateHelper;
+use private::*;
 
 use crate::{Computation, VecLengths};
 
@@ -70,7 +70,8 @@ impl<'a> PrintState for Computation<'a> {
 mod private {
     use std::collections::HashSet;
 
-    use crate::{shape::Shape, Computation, GivenOrNewElement, VecLengths, GIVEN};
+    use crate::computation::{GivenOrNewElement, GIVEN};
+    use crate::{shape::Shape, Computation, VecLengths};
 
     pub trait PrintStateHelper {
         fn get_shape_name(&self, shape_index: i32) -> String;
@@ -123,13 +124,15 @@ mod private {
                 let from_part = match &origin.element_or_ref {
                     GivenOrNewElement::GivenElement { .. } => "".to_string(),
                     GivenOrNewElement::TwoPointElement { element: _, action } => format!(
-                        " from {} and {} ({})",
+                        "[pri = {}] from {} and {} ({})",
+                        action.priority,
                         self.get_point_name(action.point_index_1),
                         self.get_point_name(action.point_index_2),
                         origin.element_or_ref,
                     ),
                     GivenOrNewElement::PointAndLineElement { element: _, action } => format!(
-                        " from {} and {} ({})",
+                        "[pri = {}] from {} and {} ({})",
+                        action.priority,
                         self.get_point_name(action.point_index_1),
                         self.get_shape_name(action.extra_index),
                         origin.element_or_ref,

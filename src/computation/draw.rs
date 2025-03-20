@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use crate::draw::private::DrawStateHelper;
+use crate::shape::Shape;
 use crate::Computation;
 use crate::FInt;
-use crate::Shape;
 use crate::VecLengths;
+use private::*;
 use svg::Document;
 
 pub trait DrawState {
