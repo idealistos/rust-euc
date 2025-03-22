@@ -61,20 +61,24 @@ impl FInt {
     }
 
     pub fn inverse(self) -> FInt {
-        if self.0 <= 0.0 && self.1 >= 0.0 {
+        if self.0.is_nan() || self.1.is_nan() || (self.0 <= 0.0 && self.1 >= 0.0) {
             Self::new_with_bounds(f64::NAN, f64::NAN)
         } else if self.0 > 0.0 {
             Self::new_with_bounds((1.0 / self.1).dec(), (1.0 / self.0).inc())
         } else {
-            self.negate().inverse().negate()
+            let x = self.negate();
+            // if !(x.0 <= 0.0 && x.1 >= 0.0) && !(x.0 > 0.0) {
+            //     println!("Infinite recursion in inverse() for {:?}", self);
+            // }
+            x.inverse().negate()
         }
     }
 
-    pub fn sqr(self) -> FInt {
-        self * self
+    pub fn sqr(&self) -> FInt {
+        *self * *self
     }
 
-    pub fn sqrt(self) -> FInt {
+    pub fn sqrt(&self) -> FInt {
         if self.0 < 0.0 {
             Self::new_with_bounds(f64::NAN, f64::NAN)
         } else {
@@ -82,12 +86,16 @@ impl FInt {
         }
     }
 
-    pub fn always_positive(self) -> bool {
+    pub fn always_positive(&self) -> bool {
         self.0 > 0.0
     }
 
-    pub fn midpoint(self) -> f64 {
+    pub fn midpoint(&self) -> f64 {
         0.5 * (self.0 + self.1)
+    }
+
+    pub fn well_formed(&self) -> bool {
+        !self.0.is_nan() && !self.1.is_nan()
     }
 }
 

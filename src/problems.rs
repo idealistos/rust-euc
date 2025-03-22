@@ -54,6 +54,8 @@ pub struct ProblemDefinition {
     pub elements_to_find: Vec<Element>,
     pub action_count: u32,
     pub action_types: &'static [ActionType],
+    pub random_walk_at_n_actions: Option<u32>,
+    pub prioritize_low_action_count_shapes: bool,
 }
 #[allow(dead_code)]
 impl ProblemDefinition {
@@ -62,6 +64,8 @@ impl ProblemDefinition {
         elements_to_find: vec![],
         action_count: 0,
         action_types: &[ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
+        random_walk_at_n_actions: None,
+        prioritize_low_action_count_shapes: true,
     };
 
     const LIMITED_ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -75,6 +79,8 @@ impl ProblemDefinition {
             ActionType::MID_PERP,
             ActionType::PERP,
         ],
+        random_walk_at_n_actions: None,
+        prioritize_low_action_count_shapes: true,
     };
 
     const ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -89,6 +95,8 @@ impl ProblemDefinition {
             ActionType::PERP,
             ActionType::PAR,
         ],
+        random_walk_at_n_actions: None,
+        prioritize_low_action_count_shapes: true,
     };
 
     pub fn has_point_and_line_actions(&self) -> bool {
@@ -124,6 +132,8 @@ impl ProblemDefinition {
                 ActionType::CIRCLE21,
                 ActionType::MID_PERP,
             ],
+            random_walk_at_n_actions: None,
+            prioritize_low_action_count_shapes: true,
         }
     }
 
@@ -216,6 +226,8 @@ impl ProblemDefinition {
                 ActionType::CIRCLE21,
                 ActionType::PERP,
             ],
+            random_walk_at_n_actions: None,
+            prioritize_low_action_count_shapes: true,
         }
     }
 
@@ -362,6 +374,7 @@ impl ProblemDefinition {
             given_elements: vec![Element::Point(p1), Element::Point(p2), Element::Point(p3)],
             elements_to_find: vec![Element::LineAV(LineAV { a: p3, v })],
             action_count: 4,
+            prioritize_low_action_count_shapes: false,
             ..Self::BASIC
         }
     }
@@ -390,6 +403,7 @@ impl ProblemDefinition {
         }
     }
 
+    // Finishes in 159 seconds with prioritize_low_action_count_shapes = true, and in 13 seconds with false
     fn line_equidistant_from_two_lines_5_7() -> ProblemDefinition {
         let p1 = pt(0.0, 0.0);
         let p2 = pt(0.2345, 2.0);
@@ -405,6 +419,27 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: px, v })],
             action_count: 5,
+            prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
+    fn line_equidistant_from_two_lines_5_7_rw() -> ProblemDefinition {
+        let p1 = pt(0.0, 0.0);
+        let p2 = pt(0.2345, 2.0);
+        let v = pt(1.0, 0.0);
+        let px = pt(0.0, 1.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: p1, v }),
+                Element::LineAV(LineAV { a: p2, v }),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: px, v })],
+            action_count: 5,
+            random_walk_at_n_actions: Some(4),
             ..Self::BASIC
         }
     }
@@ -717,6 +752,60 @@ impl ProblemDefinition {
         }
     }
 
+    // Solution (for this particular case, cannot be generalized):
+    // - Line(nx=0.000,ny=1.000,d=-1.000)
+    // - Line(nx=0.600,ny=-0.800,d=-1.000)
+    // - Line(nx=0.600,ny=-0.800,d=1.000)
+    // - Circle(c.x=-3.000,c.y=-1.000,r2=11.111)
+    // - Circle(c.x=0.333,c.y=-1.000,r2=4.444)
+    // - Line(nx=0.236,ny=-0.972,d=-0.525)
+    // - Line(nx=0.949,ny=0.316,d=0.000)
+    // - Circle(c.x=-0.167,c.y=0.500,r2=0.278)
+    // - Circle(c.x=0.000,c.y=0.000,r2=1.000)
+    fn circle_tangent_to_three_lines_7_8_rw() -> ProblemDefinition {
+        let cx = pt(0.0, 0.0);
+        let p = pt(0.0, -1.0);
+        let v = pt(1.0, 0.0);
+        let v2 = pt(0.8, 0.6);
+        let px1 = pt(-0.6, 0.8);
+        let px2 = pt(0.6, -0.8);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: p, v }),
+                Element::LineAV(LineAV { a: px1, v: v2 }),
+                Element::LineAV(LineAV { a: px2, v: v2 }),
+            ],
+            elements_to_find: vec![Element::CircleCP(CircleCP { c: cx, p })],
+            action_count: 6,
+            random_walk_at_n_actions: Some(4),
+            ..Self::BASIC
+        }
+    }
+
+    fn circle_tangent_to_three_lines_7_8_rw_alt() -> ProblemDefinition {
+        let cos = 0.814237;
+        let sin = (1.0f64 - cos * cos).sqrt();
+        let cx = pt(0.0, 0.0);
+        let p = pt(0.0, -1.0);
+        let v = pt(1.0, 0.0);
+        let v2 = pt(cos, sin);
+        let px1 = pt(-sin, cos);
+        let px2 = pt(sin, -cos);
+        let p_additional = pt(0.2345, -1.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: p, v }),
+                Element::LineAV(LineAV { a: px1, v: v2 }),
+                Element::LineAV(LineAV { a: px2, v: v2 }),
+                Element::Point(p_additional),
+            ],
+            elements_to_find: vec![Element::CircleCP(CircleCP { c: cx, p })],
+            action_count: 6,
+            random_walk_at_n_actions: Some(4),
+            ..Self::BASIC
+        }
+    }
+
     fn segment_by_midpoint_7_9_adv() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.5);
@@ -756,8 +845,9 @@ impl ProblemDefinition {
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::chord_trisection_10_8()
-        // Self::circle_tangent_to_three_lines_7_8()
+        // Self::chord_trisection_10_8()
+        Self::circle_tangent_to_three_lines_7_8_rw_alt()
+        // Self::line_equidistant_from_two_lines_5_7_rw()
 
         // Too large:
         // Self::circumscribed_square_5_8()

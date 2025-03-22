@@ -7,7 +7,7 @@ pub trait WithTwoHashes: Eq + Copy {
     fn hash2<H: Hasher>(&self, state: &mut H);
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 struct Hash1Wrapper<T: WithTwoHashes>(T);
 impl<T: WithTwoHashes> Hash for Hash1Wrapper<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -15,7 +15,7 @@ impl<T: WithTwoHashes> Hash for Hash1Wrapper<T> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 struct Hash2Wrapper<T: WithTwoHashes>(T);
 impl<T: WithTwoHashes> Hash for Hash2Wrapper<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -35,6 +35,7 @@ impl<'a, T: WithTwoHashes> Iterator for HashSet2Iter<'a, T> {
     }
 }
 
+#[derive(Clone)]
 pub struct HashSet2<T: WithTwoHashes>(HashSet<Hash1Wrapper<T>>, HashSet<Hash2Wrapper<T>>, u32);
 impl<'a, T: WithTwoHashes> IntoIterator for &'a HashSet2<T> {
     type Item = &'a T;
@@ -107,7 +108,7 @@ impl<T: WithTwoHashes> HashSet2<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HashMap2<T: WithTwoHashes, V: Copy>(
     HashMap<Hash1Wrapper<T>, V>,
     HashMap<Hash2Wrapper<T>, V>,

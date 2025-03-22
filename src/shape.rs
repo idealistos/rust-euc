@@ -1,6 +1,8 @@
+use regex::Regex;
 use std::{
-    fmt::{Display, Formatter, Result},
+    fmt::{self, Display, Formatter},
     hash::{DefaultHasher, Hasher},
+    str::FromStr,
 };
 
 use crate::{fint::FInt, hashset2::WithTwoHashes};
@@ -25,7 +27,7 @@ impl WithTwoHashes for Point {
     }
 }
 impl Display for Point {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Pt(x={},y={})", self.0, self.1)
     }
 }
@@ -45,12 +47,17 @@ impl Point {
     pub fn rotated_90_pos(&self) -> Point {
         Point(self.1.negate(), self.0)
     }
+
+    pub fn well_formed(&self) -> bool {
+        self.0.well_formed() && self.1.well_formed()
+    }
 }
 
 pub trait ShapeTrait: Display {
     fn find_intersection_points(&self, s: &Shape) -> [Option<Point>; 2];
     fn contains_point(&self, point: &Point) -> bool;
     fn get_direction(&self) -> Option<Point>;
+    fn well_formed(&self) -> bool;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -94,10 +101,30 @@ impl ShapeTrait for Line {
     fn get_direction(&self) -> Option<Point> {
         Some(Point(self.ny.negate(), self.nx))
     }
+
+    fn well_formed(&self) -> bool {
+        self.nx.well_formed() && self.ny.well_formed() && self.d.well_formed()
+    }
 }
 impl Display for Line {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Line(nx={},ny={},d={})", self.nx, self.ny, self.d)
+    }
+}
+impl FromStr for Line {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Example: Line(nx=0.600,ny=-0.800,d=1.000)
+        let regex = Regex::new(r"Line\(nx=([0-9.e-]+),ny=([0-9.e-]+),d=([0-9.e-]+)\)").unwrap();
+        let captures = regex.captures(s).ok_or("Wrong format: ".to_string() + s)?;
+        let nx: f64 = captures.get(1).unwrap().as_str().parse().unwrap();
+        let ny: f64 = captures.get(2).unwrap().as_str().parse().unwrap();
+        let d: f64 = captures.get(3).unwrap().as_str().parse().unwrap();
+        Ok(Self {
+            nx: FInt::new(nx),
+            ny: FInt::new(ny),
+            d: FInt::new(d),
+        })
     }
 }
 impl Line {
@@ -188,14 +215,34 @@ impl ShapeTrait for Circle {
     fn get_direction(&self) -> Option<Point> {
         None
     }
+
+    fn well_formed(&self) -> bool {
+        self.c.well_formed() && self.r2.well_formed()
+    }
 }
 impl Display for Circle {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
             "Circle(c.x={},c.y={},r2={})",
             self.c.0, self.c.1, self.r2
         )
+    }
+}
+impl FromStr for Circle {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Example: Circle(c.x=0.600,c.y=-0.800,r2=1.000)
+        let regex =
+            Regex::new(r"Circle\(c\.x=([0-9.e-]+),c\.y=([0-9.e-]+),r2=([0-9.e-]+)\)").unwrap();
+        let captures = regex.captures(s).ok_or("Wrong format: ".to_string() + s)?;
+        let cx: f64 = captures.get(1).unwrap().as_str().parse().unwrap();
+        let cy: f64 = captures.get(2).unwrap().as_str().parse().unwrap();
+        let r2: f64 = captures.get(3).unwrap().as_str().parse().unwrap();
+        Ok(Self {
+            c: Point(FInt::new(cx), FInt::new(cy)),
+            r2: FInt::new(r2),
+        })
     }
 }
 impl Circle {
@@ -277,10 +324,20 @@ impl ShapeTrait for Ray {
     fn get_direction(&self) -> Option<Point> {
         Some(self.v)
     }
+
+    fn well_formed(&self) -> bool {
+        self.a.well_formed() && self.v.well_formed()
+    }
 }
 impl Display for Ray {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Ray(a={},v={})", self.a, self.v)
+    }
+}
+impl FromStr for Ray {
+    type Err = String;
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+        Err("Not supported".to_string())
     }
 }
 impl Ray {
@@ -387,7 +444,7 @@ impl WithTwoHashes for Shape {
     }
 }
 impl Display for Shape {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Shape::Line(line) => line.fmt(f),
             Shape::Ray(ray) => ray.fmt(f),
@@ -419,11 +476,57 @@ impl ShapeTrait for Shape {
             Shape::Circle(_circle) => None,
         }
     }
+
+    fn well_formed(&self) -> bool {
+        match self {
+            Shape::Line(line) => line.well_formed(),
+            Shape::Ray(ray) => ray.well_formed(),
+            Shape::Circle(circle) => circle.well_formed(),
+        }
+    }
+}
+impl FromStr for Shape {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let pos = s.find('(').ok_or("No '('".to_string())?;
+        let head = &s[..pos];
+        match head {
+            "Line" => Line::from_str(s).map(|line| Shape::Line(line)),
+            "Circle" => Circle::from_str(s).map(|circle| Shape::Circle(circle)),
+            "Ray" => Ray::from_str(s).map(|ray| Shape::Ray(ray)),
+            _ => Err("Wrong head: {}".to_string() + head),
+        }
+    }
 }
 
 mod tests {
     #[cfg(test)]
     use super::*;
+
+    #[test]
+    fn test_from_str_for_line() {
+        let line = Line {
+            nx: FInt::new(0.6),
+            ny: FInt::new(0.8),
+            d: FInt::new(1.4),
+        };
+        let as_str = format!("{}", line);
+        assert_eq!(as_str, "Line(nx=0.600,ny=0.800,d=1.400)".to_string());
+        let from_str = Line::from_str(as_str.as_str()).unwrap();
+        assert_eq!(from_str, line);
+    }
+
+    #[test]
+    fn test_from_str_for_circle() {
+        let circle = Circle {
+            c: Point(FInt::new(0.6), FInt::new(0.8)),
+            r2: FInt::new(1.4),
+        };
+        let as_str = format!("{}", circle);
+        assert_eq!(as_str, "Circle(c.x=0.600,c.y=0.800,r2=1.400)".to_string());
+        let from_str = Circle::from_str(as_str.as_str()).unwrap();
+        assert_eq!(from_str, circle);
+    }
 
     #[test]
     fn test_line_intersection() {

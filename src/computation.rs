@@ -1,5 +1,7 @@
 pub use draw::DrawState;
 pub use print::PrintState;
+use random_walk::RandomWalkProcessing;
+use random_walk::RandomWalkSolution;
 
 use crate::element::CircleCP;
 use crate::element::Element;
@@ -13,9 +15,9 @@ use crate::problems::PointAndLineActionType;
 use crate::problems::ProblemDefinition;
 use crate::problems::TwoPointActionType;
 use crate::shape::ShapeTrait;
-// use rayon::prelude::*;
 use crate::shape::{Point, Shape};
 use crate::VecLengths;
+use rayon::prelude::*;
 use std::cmp::{Ord, Ordering};
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
@@ -25,10 +27,12 @@ use std::time::SystemTime;
 
 mod draw;
 mod print;
+mod random_walk;
 
 const GIVEN: i32 = -1;
+const RANDOM_WALK_LIMIT: u32 = 500000000;
 
-pub enum GivenOrNewElement<'a> {
+enum GivenOrNewElement<'a> {
     GivenElement { element: &'a Element, shape: Shape },
     TwoPointElement { element: Element, action: Action },
     PointAndLineElement { element: Element, action: Action },
@@ -174,6 +178,14 @@ impl PriorityComputation for TwoPointActionType {
         shape: &Shape,
         deps_count: u32,
     ) -> i32 {
+        match comp.problem.random_walk_at_n_actions {
+            Some(n) => {
+                if deps_count >= n - 1 {
+                    return -1;
+                }
+            }
+            None => (),
+        }
         let origin1 = &comp.point_origins[point_index_1 as usize];
         let origin2 = &comp.point_origins[point_index_2 as usize];
         let mut found_shape_mask = origin1.found_shape_mask | origin2.found_shape_mask;
@@ -188,7 +200,7 @@ impl PriorityComputation for TwoPointActionType {
             return -1;
         }
         let mut priority: i32 = 2 * ((comp.problem.action_count as i32) - (deps_count as i32));
-        if deps_count <= 2 {
+        if deps_count <= 2 && comp.problem.prioritize_low_action_count_shapes {
             priority += (3 - (deps_count as i32)) * 50;
         }
         if comp.found_points.contains(origin1.point) {
@@ -233,6 +245,14 @@ impl PriorityComputation for PointAndLineActionType {
         shape: &Shape,
         deps_count: u32,
     ) -> i32 {
+        match comp.problem.random_walk_at_n_actions {
+            Some(n) => {
+                if deps_count >= n {
+                    return -1;
+                }
+            }
+            None => (),
+        }
         let point_origin = &comp.point_origins[point_index_1 as usize];
         let line_origin = &comp.shape_origins[extra_index as usize];
         let mut found_shape_mask = point_origin.found_shape_mask | line_origin.found_shape_mask;
@@ -247,7 +267,7 @@ impl PriorityComputation for PointAndLineActionType {
             return -1;
         }
         let mut priority: i32 = 2 * ((comp.problem.action_count as i32) - (deps_count as i32));
-        if deps_count <= 2 {
+        if deps_count <= 2 && comp.problem.prioritize_low_action_count_shapes {
             priority += (3 - (deps_count as i32)) * 50;
         }
         if comp.found_points.contains(point_origin.point) {
@@ -343,6 +363,7 @@ impl<'a> Computation<'a> {
         lower_mask.count_ones() + deps_vec_1.len_u32() + deps_vec_2.len_u32() - same_count
     }
 
+    #[allow(dead_code)]
     fn get_combined_three_deps_count(&self, deps1: u64, deps2: u64, deps3: u64) -> u32 {
         let combined_mask = deps1 | deps2 | deps3;
         let lower_mask = combined_mask & ((1u64 << 40) - 1);
@@ -454,6 +475,38 @@ impl<'a> Computation<'a> {
         lower_mask | ((index as u64) << 40)
     }
 
+    fn get_action_deps(&self, action: &Action) -> [u64; 3] {
+        match action.action_type {
+            ActionType::TwoPointActionType(_) => [
+                self.point_origins[action.point_index_1 as usize].deps,
+                self.point_origins[action.point_index_2 as usize].deps,
+                0,
+            ],
+            ActionType::PointAndLineActionType(_) => [
+                self.point_origins[action.point_index_1 as usize].deps,
+                self.shape_origins[action.extra_index as usize].deps,
+                0,
+            ],
+        }
+    }
+
+    fn requires_deps(&self, action_deps: &[u64; 3], deps: u64) -> bool {
+        if deps == (deps & ((1u64 << 40) - 1)) {
+            (action_deps[0] & deps) == deps
+                || (action_deps[1] & deps) == deps
+                || (action_deps[2] & deps) == deps
+        } else {
+            for i in 0..3 {
+                if self.get_combined_deps_count(action_deps[i], deps)
+                    == self.get_deps_count(action_deps[i])
+                {
+                    return true;
+                }
+            }
+            false
+        }
+    }
+
     fn get_solution_deps_list(&self) -> HashSet<u64> {
         let mut deps_list: HashSet<u64> = HashSet::new();
         for i in 0..self.shape_origins.len_i32() {
@@ -494,7 +547,11 @@ impl<'a> Computation<'a> {
         for action_type in self.problem.action_types {
             let maybe_action = match action_type {
                 ActionType::TwoPointActionType(two_point_action_type) => {
-                    let element = self.create_two_point_element(i1, i2, *two_point_action_type);
+                    let element = Self::create_two_point_element(
+                        &self.point_origins[i1 as usize].point,
+                        &self.point_origins[i2 as usize].point,
+                        *two_point_action_type,
+                    );
                     let new_shape = element.get_shape().unwrap();
                     if self.shapes.contains_key(new_shape) {
                         None
@@ -546,9 +603,9 @@ impl<'a> Computation<'a> {
         for action_type in self.problem.action_types {
             let maybe_action = match action_type {
                 ActionType::PointAndLineActionType(point_and_line_action_type) => {
-                    let element = self.create_point_and_line_element(
-                        i_point,
-                        i_line,
+                    let element = Self::create_point_and_line_element(
+                        &self.point_origins[i_point as usize].point,
+                        &self.shape_origins[i_line as usize].get_shape(),
                         *point_and_line_action_type,
                     );
                     let new_shape = element.get_shape().unwrap();
@@ -773,53 +830,44 @@ impl<'a> Computation<'a> {
     }
 
     fn create_two_point_element(
-        &self,
-        point_index_1: i32,
-        point_index_2: i32,
+        point1: &Point,
+        point2: &Point,
         action_type: TwoPointActionType,
     ) -> Element {
         match action_type {
             TwoPointActionType::Line => Element::LineAB(LineAB {
-                a: self.point_origins[point_index_1 as usize].point,
-                b: self.point_origins[point_index_2 as usize].point,
+                a: *point1,
+                b: *point2,
             }),
             TwoPointActionType::Circle12 => Element::CircleCP(CircleCP {
-                c: self.point_origins[point_index_1 as usize].point,
-                p: self.point_origins[point_index_2 as usize].point,
+                c: *point1,
+                p: *point2,
             }),
             TwoPointActionType::Circle21 => Element::CircleCP(CircleCP {
-                c: self.point_origins[point_index_2 as usize].point,
-                p: self.point_origins[point_index_1 as usize].point,
+                c: *point2,
+                p: *point1,
             }),
             TwoPointActionType::MidPerp => Element::MidPerpAB(MidPerpAB {
-                a: self.point_origins[point_index_1 as usize].point,
-                b: self.point_origins[point_index_2 as usize].point,
+                a: *point1,
+                b: *point2,
             }),
             TwoPointActionType::Last => panic!("Can't happen"),
         }
     }
 
     fn create_point_and_line_element(
-        &self,
-        point_index: i32,
-        line_index: i32,
+        point: &Point,
+        line: &Shape,
         action_type: PointAndLineActionType,
     ) -> Element {
         match action_type {
             PointAndLineActionType::Perp => Element::LineAV(LineAV {
-                a: self.point_origins[point_index as usize].point,
-                v: self.shape_origins[line_index as usize]
-                    .get_shape()
-                    .get_direction()
-                    .unwrap()
-                    .rotated_90_pos(),
+                a: *point,
+                v: line.get_direction().unwrap().rotated_90_pos(),
             }),
             PointAndLineActionType::Par => Element::LineAV(LineAV {
-                a: self.point_origins[point_index as usize].point,
-                v: self.shape_origins[line_index as usize]
-                    .get_shape()
-                    .get_direction()
-                    .unwrap(),
+                a: *point,
+                v: line.get_direction().unwrap(),
             }),
             PointAndLineActionType::Last => panic!("Can't happen"),
         }
@@ -829,9 +877,9 @@ impl<'a> Computation<'a> {
         let element_or_ref = match action.action_type {
             ActionType::TwoPointActionType(two_point_action_type) => {
                 GivenOrNewElement::TwoPointElement {
-                    element: self.create_two_point_element(
-                        action.point_index_1,
-                        action.point_index_2,
+                    element: Self::create_two_point_element(
+                        &self.point_origins[action.point_index_1 as usize].point,
+                        &self.point_origins[action.point_index_2 as usize].point,
                         two_point_action_type,
                     ),
                     action,
@@ -839,9 +887,9 @@ impl<'a> Computation<'a> {
             }
             ActionType::PointAndLineActionType(point_and_line_action_type) => {
                 GivenOrNewElement::PointAndLineElement {
-                    element: self.create_point_and_line_element(
-                        action.point_index_1,
-                        action.extra_index,
+                    element: Self::create_point_and_line_element(
+                        &self.point_origins[action.point_index_1 as usize].point,
+                        &self.shape_origins[action.extra_index as usize].get_shape(),
                         point_and_line_action_type,
                     ),
                     action,
@@ -870,15 +918,25 @@ impl<'a> Computation<'a> {
         }
     }
 
-    pub fn solve(&mut self) {
+    pub fn solve(&'a mut self) {
         let time = SystemTime::now();
+        let mut rw_queue = Vec::new();
         for i in 0..1000000 {
             if self.queue.is_empty() {
-                self.print_state();
+                // self.print_state();
                 println!("All actions explored");
-                return;
+                break;
             }
             let mut action = self.queue.pop().unwrap();
+            match self.problem.random_walk_at_n_actions {
+                Some(n) => {
+                    if action.deps_count == n - 2 {
+                        rw_queue.push(action);
+                        continue;
+                    }
+                }
+                None => (),
+            }
             let priority = action.compute_priority(self);
             if priority < 0 {
                 println!("Skipping action");
@@ -899,27 +957,50 @@ impl<'a> Computation<'a> {
                 println!("Finished in {} seconds", time.elapsed().unwrap().as_secs());
                 return;
             }
-            if i == 10 || i == 30 || i == 120 || i == 300 {
-                self.print_state();
-                self.draw_state(format!("image{}.svg", i), 5.0, HashSet::new());
-            }
+            // if i == 10 || i == 30 || i == 120 || i == 300 {
+            //     self.print_state();
+            //     self.draw_state(format!("image{}.svg", i), 5.0, HashSet::new());
+            // }
             if i % 10 == 0 {
+                if false {
+                    println!(
+                        "Loop {} ({}/{})",
+                        i,
+                        self.point_origins.len(),
+                        self.shape_origins.len()
+                    );
+                }
                 println!(
-                    "Loop {}; points: {} ({}), shapes: {} ({}), found points: {}, found shapes: {}, queue size: {}, deps: {}/{}, priority: {}, time: {}",
+                    "Loop {}; points: {}, shapes: {}, found: {}+{}, queue: {}, deps: {}, p: {}, time: {}",
                     i,
                     self.point_origins.len(),
-                    self.points.len(),
                     self.shape_origins.len(),
-                    self.shapes.len(),
                     self.found_points.len(),
                     self.found_shapes.len(),
                     self.queue.len(),
                     self.deps_combinations.len(),
-                    self.deps_indices_by_hashes.len(), 
                     if self.queue.is_empty() { 0 } else { self.queue.peek().unwrap().priority},
                     time.elapsed().unwrap().as_secs(),
                 );
             }
+        }
+        if !rw_queue.is_empty() {
+            println!("Found {} elements in the random walk queue", rw_queue.len());
+            let random_walk_parent = self.create_random_walk_parent();
+            let random_walks = self.prepare_random_walks(&random_walk_parent, rw_queue);
+            println!(
+                "Starting random walks, time: {}",
+                time.elapsed().unwrap().as_secs(),
+            );
+            let limit = RANDOM_WALK_LIMIT / random_walks.len_u32();
+            let _rw_results: Vec<Option<RandomWalkSolution>> = random_walks
+                .par_iter()
+                .map(|rw| rw.run_iterations(limit))
+                .collect();
+            println!(
+                "Ended random walks, time: {}",
+                time.elapsed().unwrap().as_secs(),
+            );
         }
     }
 }
