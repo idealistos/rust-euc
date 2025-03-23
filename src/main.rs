@@ -1,5 +1,4 @@
 use computation::Computation;
-use computation::DrawState;
 use computation::PrintState;
 use element::CircleCP;
 use element::Element;
@@ -61,7 +60,6 @@ struct Main();
 impl Main {
     fn compute() {
         let problem = ProblemDefinition::get_problem();
-        // let problem = Self::midpoint_problem_1_3();
         let mut computation = Computation::new(&problem);
 
         computation.initialize_queue();
@@ -124,7 +122,7 @@ fn test1() {
 }
 
 fn main() {
-    test1();
-    Computation::draw_shapes_from_file("shapes1.txt".to_string(), "shapes1.svg".to_string(), 5.0);
+    // test1();
+    // Computation::draw_shapes_from_file("shapes2.txt".to_string(), "shapes2.svg".to_string(), 5.0);
     Main::compute();
 }

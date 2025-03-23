@@ -44,14 +44,17 @@ impl<'a> PrintState for Computation<'a> {
         let mut queue_copy = self.queue.clone().into_sorted_vec();
         queue_copy.reverse();
         println!("Actions in queue: {}", queue_copy.len());
-        for (i, action) in queue_copy.iter().enumerate() {
-            if i < 20 {
-                println!(
-                    "Points {} and {}, shape = {}: priority = {}",
-                    action.point_index_1, action.point_index_2, action.shape, action.priority
-                );
-            }
-        }
+        // for (i, action) in queue_copy.iter().enumerate() {
+        //     if i < 100 {
+        //         let mut indices = action.get_point_indices();
+        //         let mut shape_indices = action.get_shape_indices();
+        //         indices.append(&mut shape_indices);
+        //         println!(
+        //             "Indices {:?}, shape = {}: priority = {}, type: {:?}",
+        //             indices, action.shape, action.priority, action.action_type,
+        //         );
+        //     }
+        // }
     }
 
     fn print_solution(&mut self) {
@@ -70,7 +73,7 @@ impl<'a> PrintState for Computation<'a> {
 mod private {
     use std::collections::HashSet;
 
-    use crate::computation::{GivenOrNewElement, GIVEN};
+    use crate::computation::{action::ElementLink, GIVEN};
     use crate::{shape::Shape, Computation, VecLengths};
 
     pub trait PrintStateHelper {
@@ -81,10 +84,9 @@ mod private {
     impl<'a> PrintStateHelper for Computation<'a> {
         fn get_shape_name(&self, shape_index: i32) -> String {
             let origin = &self.shape_origins[shape_index as usize];
-            let prefix = match &origin.element_or_ref {
-                GivenOrNewElement::GivenElement { .. } => "Given",
-                GivenOrNewElement::TwoPointElement { .. } => "",
-                GivenOrNewElement::PointAndLineElement { .. } => "",
+            let prefix = match &origin.element_link {
+                ElementLink::GivenElement { .. } => "Given",
+                ElementLink::Action(_) => "",
             };
             let name = match origin.get_shape() {
                 Shape::Line(_line) => "Line",
@@ -121,22 +123,31 @@ mod private {
                     continue;
                 }
                 let origin = &self.shape_origins[i as usize];
-                let from_part = match &origin.element_or_ref {
-                    GivenOrNewElement::GivenElement { .. } => "".to_string(),
-                    GivenOrNewElement::TwoPointElement { element: _, action } => format!(
-                        "[pri = {}] from {} and {} ({})",
-                        action.priority,
-                        self.get_point_name(action.point_index_1),
-                        self.get_point_name(action.point_index_2),
-                        origin.element_or_ref,
-                    ),
-                    GivenOrNewElement::PointAndLineElement { element: _, action } => format!(
-                        "[pri = {}] from {} and {} ({})",
-                        action.priority,
-                        self.get_point_name(action.point_index_1),
-                        self.get_shape_name(action.extra_index),
-                        origin.element_or_ref,
-                    ),
+                let from_part = match &origin.element_link {
+                    ElementLink::GivenElement { .. } => "".to_string(),
+                    ElementLink::Action(action) => {
+                        let mut names: Vec<String> = action
+                            .get_point_indices()
+                            .into_iter()
+                            .map(|i| self.get_point_name(i))
+                            .collect();
+                        let mut shape_names: Vec<String> = action
+                            .get_shape_indices()
+                            .into_iter()
+                            .map(|i| self.get_shape_name(i))
+                            .collect();
+                        names.append(&mut shape_names);
+
+                        let point_names_str = if names.len() == 2 {
+                            format!("{} and {}", names[0], names[1])
+                        } else {
+                            format!("{}, {}, and {}", names[0], names[1], names[2])
+                        };
+                        format!(
+                            "[pri = {}] from {} ({})",
+                            action.priority, point_names_str, origin.element_link,
+                        )
+                    }
                 };
                 let origin = &self.shape_origins[i as usize];
                 let found_part = if self.shapes_to_find.contains(origin.get_shape()) {

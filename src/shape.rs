@@ -51,6 +51,10 @@ impl Point {
     pub fn well_formed(&self) -> bool {
         self.0.well_formed() && self.1.well_formed()
     }
+
+    pub fn distance_to(&self, point: &Point) -> FInt {
+        ((self.0 - point.0).sqr() + (self.1 - point.1).sqr()).sqrt()
+    }
 }
 
 pub trait ShapeTrait: Display {

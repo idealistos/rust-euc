@@ -1,5 +1,7 @@
 use std::{mem::transmute, sync::RwLock};
 
+use crate::computation::action::ElementLink;
+
 use super::*;
 use rand::{rng, Rng};
 
@@ -70,7 +72,9 @@ impl<'a> RandomWalk<'a> {
             let mut i = i0;
             let chosen_count = i0 - self.parent.given_shape_count; // N - 1
             let i_max = i0 + self.parent.action_count - chosen_count;
-            while i < i_max {
+            let mut i_retry = 0;
+            while i < i_max && i_retry < i_max - i0 + 10 {
+                i_retry += 1;
                 let n = self.parent.pt_index_counts[(i - i0) as usize];
                 let rw_choice_count = n * n * action_type_count;
                 let rw_choice = rng().random_range(0..rw_choice_count);
@@ -204,7 +208,7 @@ impl<'a> RandomWalk<'a> {
 
     pub fn get_shape(&self, points: &[Point; 2], i_action: u32) -> Option<Shape> {
         let action_type = unsafe { transmute(i_action as i8) };
-        Computation::create_two_point_element(&points[0], &points[1], action_type).get_shape()
+        Action::create_two_point_element(&points[0], &points[1], action_type).get_shape()
     }
 }
 
@@ -227,11 +231,11 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
         }
         let mut given_shapes = Vec::new();
         for shape_origin in &self.shape_origins {
-            match shape_origin.element_or_ref {
-                GivenOrNewElement::GivenElement { shape, .. } => {
+            match shape_origin.element_link {
+                ElementLink::GivenElement { shape, .. } => {
                     given_shapes.push(shape);
                 }
-                _ => (),
+                ElementLink::Action(_) => (),
             }
         }
         let mut shapes_to_find = HashSet2::new();
@@ -279,12 +283,9 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
         let mut shapes_seen_so_far = HashSet2::new();
         let mut given_shapes = Vec::new();
         for shape_origin in &self.shape_origins {
-            let deps_count = match &shape_origin.element_or_ref {
-                GivenOrNewElement::GivenElement { .. } => 0,
-                GivenOrNewElement::TwoPointElement { element: _, action } => action.deps_count + 1,
-                GivenOrNewElement::PointAndLineElement { element: _, action } => {
-                    action.deps_count + 1
-                }
+            let deps_count = match &shape_origin.element_link {
+                ElementLink::GivenElement { .. } => 0,
+                ElementLink::Action(action) => action.deps_count + 1,
             };
             if deps_count <= self.problem.random_walk_at_n_actions.unwrap() - 2 {
                 shapes_seen_so_far.insert(shape_origin.get_shape());
@@ -307,16 +308,13 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
                 parent: random_walk_parent,
                 initial_shapes: given_shapes.clone(),
             });
-            deps.push(self.get_action_deps(&action));
+            deps.push(action.get_action_deps(&self));
             last_shapes.push(action.shape);
         }
         shapes_seen_so_far = HashSet2::new();
         for i in 0..self.shape_origins.len() {
             let shape_origin = &self.shape_origins[i];
-            if matches!(
-                shape_origin.element_or_ref,
-                GivenOrNewElement::GivenElement { .. }
-            ) {
+            if matches!(shape_origin.element_link, ElementLink::GivenElement { .. }) {
                 continue;
             }
             if shapes_seen_so_far.contains(shape_origin.get_shape()) {

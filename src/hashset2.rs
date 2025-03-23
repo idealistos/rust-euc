@@ -82,8 +82,12 @@ impl<T: WithTwoHashes> HashSet2<T> {
     }
 
     pub fn slow_remove(&mut self, value: T) {
-        self.0.retain(|x| x.0 != value);
-        self.1.retain(|x| x.0 != value);
+        let has_value = self.contains(value);
+        if has_value {
+            self.0.retain(|x| x.0 != value);
+            self.1.retain(|x| x.0 != value);
+            self.2 -= 1;
+        }
     }
 
     pub fn as_vector(&self) -> Vec<T> {

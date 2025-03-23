@@ -1,37 +1,18 @@
 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
-<circle cx="400" cy="400" fill="none" r="80" stroke="darkgray" stroke-width="3"/>
-<line fill="none" stroke="blue" stroke-width="3" x1="400" x2="400" y1="-800" y2="1600"/>
-<circle cx="400" cy="480" fill="none" r="80" stroke="blue" stroke-width="3"/>
-<circle cx="400" cy="480" fill="none" r="160" stroke="green" stroke-width="3"/>
-<circle cx="400" cy="320" fill="none" r="160" stroke="green" stroke-width="3"/>
-<circle cx="400" cy="320" fill="none" r="80" stroke="green" stroke-width="3"/>
-<circle cx="400" cy="240" fill="none" r="80" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="1404" x2="-673" y1="-260" y2="940"/>
-<circle cx="330" cy="360" fill="none" r="80" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="-604" x2="1473" y1="-260" y2="940"/>
-<circle cx="469" cy="360" fill="none" r="80" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="160" fill="none" r="160" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="320" fill="none" r="320" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="641" fill="none" r="320" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="320" fill="none" r="240" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="561" fill="none" r="240" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="965" x2="-234" y1="-659" y2="1419"/>
-<circle cx="400" cy="320" fill="none" r="138" stroke="red" stroke-width="1"/>
-<circle cx="330" cy="440" fill="none" r="138" stroke="red" stroke-width="1"/>
-<line fill="none" stroke="red" stroke-width="1" x1="-165" x2="1034" y1="-659" y2="1419"/>
-<circle cx="469" cy="440" fill="none" r="138" stroke="red" stroke-width="1"/>
-<circle cx="400" cy="182" fill="none" r="138" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="459" fill="none" r="138" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="320" fill="none" r="480" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="800" fill="none" r="480" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="80" fill="none" r="240" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="320" fill="none" r="640" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="960" fill="none" r="640" stroke="purple" stroke-width="1"/>
-<circle cx="400" cy="0" fill="none" r="320" stroke="purple" stroke-width="1"/>
-<circle cx="330" cy="280" fill="none" r="80" stroke="purple" stroke-width="1"/>
-<circle cx="469" cy="280" fill="none" r="80" stroke="purple" stroke-width="1"/>
-<line fill="none" stroke="purple" stroke-width="1" x1="1542" x2="-781" y1="26" y2="625"/>
-<circle cx="322" cy="340" fill="none" r="80" stroke="purple" stroke-width="1"/>
-<line fill="none" stroke="purple" stroke-width="1" x1="-742" x2="1581" y1="26" y2="625"/>
-<circle cx="477" cy="340" fill="none" r="80" stroke="purple" stroke-width="1"/>
+<line fill="none" stroke="darkgray" stroke-width="3" x1="400" x2="1600" y1="400" y2="400"/>
+<line fill="none" stroke="blue" stroke-width="3" x1="-800" x2="1600" y1="400" y2="400"/>
+<circle cx="400" cy="400" fill="none" r="98" stroke="blue" stroke-width="3"/>
+<circle cx="498" cy="400" fill="none" r="98" stroke="blue" stroke-width="3"/>
+<line fill="none" stroke="blue" stroke-width="3" x1="449" x2="449" y1="-800" y2="1600"/>
+<line fill="none" stroke="green" stroke-width="3" x1="400" x2="400" y1="-800" y2="1600"/>
+<circle cx="498" cy="400" fill="none" r="197" stroke="green" stroke-width="3"/>
+<circle cx="597" cy="400" fill="none" r="98" stroke="green" stroke-width="3"/>
+<circle cx="400" cy="400" fill="none" r="49" stroke="green" stroke-width="3"/>
+<circle cx="498" cy="400" fill="none" r="49" stroke="green" stroke-width="3"/>
+<circle cx="449" cy="400" fill="none" r="98" stroke="green" stroke-width="3"/>
+<circle cx="400" cy="400" fill="none" r="197" stroke="green" stroke-width="3"/>
+<circle cx="597" cy="400" fill="none" r="197" stroke="green" stroke-width="3"/>
+<line fill="none" stroke="green" stroke-width="3" x1="498" x2="498" y1="-800" y2="1600"/>
+<circle cx="449" cy="400" fill="none" r="49" stroke="green" stroke-width="3"/>
+<line fill="none" stroke="green" stroke-width="3" x1="424" x2="424" y1="-800" y2="1600"/>
 </svg>

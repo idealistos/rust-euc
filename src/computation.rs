@@ -1,9 +1,12 @@
+use action::Action;
+use action::ElementLink;
 pub use draw::DrawState;
 pub use print::PrintState;
 use random_walk::RandomWalkProcessing;
 use random_walk::RandomWalkSolution;
 
 use crate::element::CircleCP;
+use crate::element::CircleCR;
 use crate::element::Element;
 use crate::element::LineAB;
 use crate::element::LineAV;
@@ -13,57 +16,25 @@ use crate::hashset2::HashSet2;
 use crate::problems::ActionType;
 use crate::problems::PointAndLineActionType;
 use crate::problems::ProblemDefinition;
+use crate::problems::ThreePointActionType;
 use crate::problems::TwoPointActionType;
 use crate::shape::ShapeTrait;
 use crate::shape::{Point, Shape};
 use crate::VecLengths;
 use rayon::prelude::*;
-use std::cmp::{Ord, Ordering};
+use std::cmp::Ord;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt::Display;
 use std::time::SystemTime;
 
+mod action;
 mod draw;
 mod print;
 mod random_walk;
 
 const GIVEN: i32 = -1;
-const RANDOM_WALK_LIMIT: u32 = 500000000;
-
-enum GivenOrNewElement<'a> {
-    GivenElement { element: &'a Element, shape: Shape },
-    TwoPointElement { element: Element, action: Action },
-    PointAndLineElement { element: Element, action: Action },
-}
-impl<'a> Display for GivenOrNewElement<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            GivenOrNewElement::GivenElement { element, shape: _ } => {
-                let name: &'static str = (*element).into();
-                write!(f, "{}", name)
-            }
-            GivenOrNewElement::TwoPointElement { element, action: _ } => {
-                let name: &'static str = element.into();
-                write!(f, "{}", name)
-            }
-            GivenOrNewElement::PointAndLineElement { element, action: _ } => {
-                let name: &'static str = element.into();
-                write!(f, "{}", name)
-            }
-        }
-    }
-}
-impl<'a> GivenOrNewElement<'a> {
-    pub fn get_shape(&self) -> Shape {
-        match &self {
-            GivenOrNewElement::GivenElement { element: _, shape } => *shape,
-            GivenOrNewElement::TwoPointElement { element: _, action } => action.shape,
-            GivenOrNewElement::PointAndLineElement { element: _, action } => action.shape,
-        }
-    }
-}
+const RANDOM_WALK_LIMIT: u32 = 150000000;
 
 #[derive(Debug)]
 struct PointOrigin {
@@ -72,230 +43,14 @@ struct PointOrigin {
     shape_origin_indices: [i32; 2],
     found_shape_mask: u32,
 }
-
 struct ShapeOrigin<'a> {
     deps: u64,
-    element_or_ref: GivenOrNewElement<'a>,
+    element_link: ElementLink<'a>,
     found_shape_mask: u32,
 }
 impl<'a> ShapeOrigin<'a> {
     pub fn get_shape(&self) -> Shape {
-        self.element_or_ref.get_shape()
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-struct Action {
-    priority: i32,
-    point_index_1: i32,
-    point_index_2: i32,
-    extra_index: i32,
-    action_type: ActionType,
-    shape: Shape,
-    deps_count: u32,
-}
-impl PartialOrd for Action {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.priority
-                .cmp(&other.priority)
-                .then(self.point_index_1.cmp(&other.point_index_1).reverse())
-                .then(self.point_index_2.cmp(&other.point_index_2).reverse())
-                .then(self.extra_index.cmp(&other.extra_index).reverse())
-                .then(self.action_type.cmp(&other.action_type).reverse()),
-        )
-    }
-}
-impl Ord for Action {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
-impl Action {
-    fn compute_priority(&self, comp: &Computation) -> i32 {
-        self.action_type.compute_priority(
-            comp,
-            self.point_index_1,
-            self.point_index_2,
-            self.extra_index,
-            &self.shape,
-            self.deps_count,
-        )
-    }
-
-    fn get_action_index(&self) -> usize {
-        match self.action_type {
-            ActionType::TwoPointActionType(value) => value as usize,
-            ActionType::PointAndLineActionType(value) => value as usize,
-        }
-    }
-}
-
-trait PriorityComputation {
-    fn compute_priority(
-        self,
-        comp: &Computation,
-        point_index_1: i32,
-        point_index_2: i32,
-        extra_index: i32,
-        shape: &Shape,
-        deps_count: u32,
-    ) -> i32;
-}
-impl PriorityComputation for ActionType {
-    fn compute_priority(
-        self,
-        comp: &Computation,
-        point_index_1: i32,
-        point_index_2: i32,
-        extra_index: i32,
-        shape: &Shape,
-        deps_count: u32,
-    ) -> i32 {
-        match self {
-            Self::TwoPointActionType(value) => {
-                value.compute_priority(comp, point_index_1, point_index_2, -1, shape, deps_count)
-            }
-            Self::PointAndLineActionType(value) => {
-                value.compute_priority(comp, point_index_1, -1, extra_index, shape, deps_count)
-            }
-        }
-    }
-}
-impl PriorityComputation for TwoPointActionType {
-    // Priority rules for an action (point1 + point2 + action number (0-2)):
-    // - if a point is in points_to_find, +1
-    // - if a point lies on a shape in an unregistered shapes_to_find, +5
-    // - if the resulting shape is in shapes_to_find, +10
-    // - if the resulting shape passes through an unregistered point in points_to_find, +5
-    // Base priority = 2 * (num_actions - (dep count of point1) - (dep count of point2))
-    fn compute_priority(
-        self,
-        comp: &Computation,
-        point_index_1: i32,
-        point_index_2: i32,
-        _extra_index: i32,
-        shape: &Shape,
-        deps_count: u32,
-    ) -> i32 {
-        match comp.problem.random_walk_at_n_actions {
-            Some(n) => {
-                if deps_count >= n - 1 {
-                    return -1;
-                }
-            }
-            None => (),
-        }
-        let origin1 = &comp.point_origins[point_index_1 as usize];
-        let origin2 = &comp.point_origins[point_index_2 as usize];
-        let mut found_shape_mask = origin1.found_shape_mask | origin2.found_shape_mask;
-        match comp.shape_to_find_mask_by_shape.get(*shape) {
-            Some(mask) => {
-                found_shape_mask |= mask;
-            }
-            None => (),
-        }
-        let reserved = comp.shape_to_find_mask_by_shape.len_u32() - found_shape_mask.count_ones();
-        if deps_count + reserved >= comp.problem.action_count {
-            return -1;
-        }
-        let mut priority: i32 = 2 * ((comp.problem.action_count as i32) - (deps_count as i32));
-        if deps_count <= 2 && comp.problem.prioritize_low_action_count_shapes {
-            priority += (3 - (deps_count as i32)) * 50;
-        }
-        if comp.found_points.contains(origin1.point) {
-            priority += 1;
-        }
-        if comp.found_points.contains(origin2.point) {
-            priority += 1;
-        }
-        for shape in &comp.shapes_to_find {
-            if shape.contains_point(&origin1.point) {
-                priority += 5;
-            }
-            if shape.contains_point(&origin2.point) {
-                priority += 5;
-            }
-        }
-        if comp.shapes_to_find.contains(*shape) {
-            priority += 20;
-        }
-        for point in &comp.points_to_find {
-            if shape.contains_point(&point) {
-                priority += 5;
-            }
-        }
-        priority
-    }
-}
-impl PriorityComputation for PointAndLineActionType {
-    // Priority rules for a "point + line" action:
-    // - if the point is in points_to_find, +1
-    // - if the line is in shapes_to_find, +1
-    // - if the point lies on a shape in an unregistered shapes_to_find, +5
-    // - if the resulting shape is in shapes_to_find, +10
-    // - if the resulting shape passes through an unregistered point in points_to_find, +5
-    // Base priority = 2 * (num_actions - (dep count of point) - (dep count of line))
-    fn compute_priority(
-        self,
-        comp: &Computation,
-        point_index_1: i32,
-        _point_index_2: i32,
-        extra_index: i32,
-        shape: &Shape,
-        deps_count: u32,
-    ) -> i32 {
-        match comp.problem.random_walk_at_n_actions {
-            Some(n) => {
-                if deps_count >= n {
-                    return -1;
-                }
-            }
-            None => (),
-        }
-        let point_origin = &comp.point_origins[point_index_1 as usize];
-        let line_origin = &comp.shape_origins[extra_index as usize];
-        let mut found_shape_mask = point_origin.found_shape_mask | line_origin.found_shape_mask;
-        match comp.shape_to_find_mask_by_shape.get(*shape) {
-            Some(mask) => {
-                found_shape_mask |= mask;
-            }
-            None => (),
-        }
-        let reserved = comp.shape_to_find_mask_by_shape.len_u32() - found_shape_mask.count_ones();
-        if deps_count + reserved >= comp.problem.action_count {
-            return -1;
-        }
-        let mut priority: i32 = 2 * ((comp.problem.action_count as i32) - (deps_count as i32));
-        if deps_count <= 2 && comp.problem.prioritize_low_action_count_shapes {
-            priority += (3 - (deps_count as i32)) * 50;
-        }
-        if comp.found_points.contains(point_origin.point) {
-            priority += 1;
-        }
-        if comp.found_shapes.contains(line_origin.get_shape()) {
-            priority += 1;
-        }
-        for shape in &comp.shapes_to_find {
-            if shape.contains_point(&point_origin.point) {
-                priority += 5;
-            }
-        }
-        for point in &comp.points_to_find {
-            let line_shape = line_origin.get_shape();
-            if line_shape.contains_point(point) {
-                priority += 5;
-            }
-        }
-        if comp.shapes_to_find.contains(*shape) {
-            priority += 20;
-        }
-        for point in &comp.points_to_find {
-            if shape.contains_point(&point) {
-                priority += 5;
-            }
-        }
-        priority
+        self.element_link.get_shape()
     }
 }
 
@@ -313,6 +68,7 @@ pub struct Computation<'a> {
     deps_combinations: Vec<Vec<u32>>,
     deps_indices_by_hashes: HashMap<u64, Vec<i32>>,
     shape_to_find_mask_by_shape: HashMap2<Shape, u32>,
+    final_found_shape: Option<Shape>,
 }
 impl<'a> Computation<'a> {
     pub fn new(problem: &'a ProblemDefinition) -> Self {
@@ -332,6 +88,7 @@ impl<'a> Computation<'a> {
             deps_combinations: vec![vec![]],
             deps_indices_by_hashes,
             shape_to_find_mask_by_shape: HashMap2::new(),
+            final_found_shape: None,
         }
     }
 
@@ -475,21 +232,6 @@ impl<'a> Computation<'a> {
         lower_mask | ((index as u64) << 40)
     }
 
-    fn get_action_deps(&self, action: &Action) -> [u64; 3] {
-        match action.action_type {
-            ActionType::TwoPointActionType(_) => [
-                self.point_origins[action.point_index_1 as usize].deps,
-                self.point_origins[action.point_index_2 as usize].deps,
-                0,
-            ],
-            ActionType::PointAndLineActionType(_) => [
-                self.point_origins[action.point_index_1 as usize].deps,
-                self.shape_origins[action.extra_index as usize].deps,
-                0,
-            ],
-        }
-    }
-
     fn requires_deps(&self, action_deps: &[u64; 3], deps: u64) -> bool {
         if deps == (deps & ((1u64 << 40) - 1)) {
             (action_deps[0] & deps) == deps
@@ -526,118 +268,6 @@ impl<'a> Computation<'a> {
             }
         }
         deps_list
-    }
-
-    fn check_action_two_points(
-        &self,
-        i1: i32,
-        i2: i32,
-    ) -> [Option<Action>; TwoPointActionType::Last as usize] {
-        let point_origin_1 = &self.point_origins[i1 as usize];
-        let point_origin_2 = &self.point_origins[i2 as usize];
-        let deps_count = self.get_combined_deps_count(point_origin_1.deps, point_origin_2.deps);
-        let found_shape_count =
-            (point_origin_1.found_shape_mask | point_origin_2.found_shape_mask).count_ones();
-        let reserved = self.shape_to_find_mask_by_shape.len_u32() - found_shape_count;
-        const NONE: Option<Action> = None;
-        let mut results = [NONE; TwoPointActionType::Last as usize];
-        if deps_count + reserved > self.problem.action_count {
-            return results;
-        }
-        for action_type in self.problem.action_types {
-            let maybe_action = match action_type {
-                ActionType::TwoPointActionType(two_point_action_type) => {
-                    let element = Self::create_two_point_element(
-                        &self.point_origins[i1 as usize].point,
-                        &self.point_origins[i2 as usize].point,
-                        *two_point_action_type,
-                    );
-                    let new_shape = element.get_shape().unwrap();
-                    if self.shapes.contains_key(new_shape) {
-                        None
-                    } else {
-                        Some(Action {
-                            priority: 0,
-                            point_index_1: i1,
-                            point_index_2: i2,
-                            extra_index: -1,
-                            shape: new_shape,
-                            action_type: *action_type,
-                            deps_count,
-                        })
-                    }
-                }
-                _ => None,
-            };
-            match maybe_action {
-                Some(mut action) => {
-                    let priority = action.compute_priority(self);
-                    if priority > 0 {
-                        action.priority = priority;
-                        let index = action.get_action_index();
-                        results[index] = Some(action);
-                    }
-                }
-                None => (),
-            }
-        }
-        results
-    }
-
-    fn check_action_point_and_line(
-        &self,
-        i_point: i32,
-        i_line: i32,
-    ) -> [Option<Action>; PointAndLineActionType::Last as usize] {
-        let point_origin = &self.point_origins[i_point as usize];
-        let line_origin = &self.shape_origins[i_line as usize];
-        let deps_count = self.get_combined_deps_count(point_origin.deps, line_origin.deps);
-        let found_shape_count =
-            (point_origin.found_shape_mask | line_origin.found_shape_mask).count_ones();
-        let reserved = self.shape_to_find_mask_by_shape.len_u32() - found_shape_count;
-        const NONE: Option<Action> = None;
-        let mut results = [NONE; PointAndLineActionType::Last as usize];
-        if deps_count + reserved > self.problem.action_count {
-            return results;
-        }
-        for action_type in self.problem.action_types {
-            let maybe_action = match action_type {
-                ActionType::PointAndLineActionType(point_and_line_action_type) => {
-                    let element = Self::create_point_and_line_element(
-                        &self.point_origins[i_point as usize].point,
-                        &self.shape_origins[i_line as usize].get_shape(),
-                        *point_and_line_action_type,
-                    );
-                    let new_shape = element.get_shape().unwrap();
-                    if self.shapes.contains_key(new_shape) {
-                        None
-                    } else {
-                        Some(Action {
-                            priority: 0,
-                            point_index_1: i_point,
-                            point_index_2: -1,
-                            extra_index: i_line,
-                            shape: new_shape,
-                            action_type: *action_type,
-                            deps_count,
-                        })
-                    }
-                }
-                _ => None,
-            };
-            match maybe_action {
-                Some(mut action) => {
-                    let priority = action.compute_priority(self);
-                    if priority > 0 {
-                        action.priority = priority;
-                        let index = action.get_action_index();
-                        results[index] = Some(action);
-                    }
-                }
-                None => (),
-            }
-        }
-        results
     }
 
     fn register_point(&mut self, point: Point, shape_origin_indices: [i32; 2]) {
@@ -680,17 +310,8 @@ impl<'a> Computation<'a> {
             shape_origin_indices,
             found_shape_mask,
         });
-        // let actions: Vec<Action> = (0..index)
-        //     .into_par_iter()
-        //     .map(|i| self.check_action(i, index))
-        //     .flatten()
-        //     .filter_map(|x| x)
-        //     .collect();
-        // actions
-        //     .into_iter()
-        //     .for_each(|action| self.queue.push(action));
         for i in 0..index {
-            let maybe_actions = self.check_action_two_points(i, index);
+            let maybe_actions = Action::check_action_two_points(self, i, index);
             for maybe_action in maybe_actions {
                 match maybe_action {
                     Some(action) => self.queue.push(action),
@@ -705,7 +326,7 @@ impl<'a> Computation<'a> {
                     Shape::Line(_) => (),
                     _ => continue,
                 }
-                let maybe_actions = self.check_action_point_and_line(index, i);
+                let maybe_actions = Action::check_action_point_and_line(self, index, i);
                 for maybe_action in maybe_actions {
                     match maybe_action {
                         Some(action) => self.queue.push(action),
@@ -714,6 +335,20 @@ impl<'a> Computation<'a> {
                 }
             }
         }
+        if self.problem.has_three_point_actions() {
+            for i1 in 0..index {
+                for i2 in (i1 + 1)..index {
+                    let maybe_actions = Action::check_action_three_points(self, i1, i2, index);
+                    for maybe_action in maybe_actions {
+                        match maybe_action {
+                            Some(action) => self.queue.push(action),
+                            None => (),
+                        }
+                    }
+                }
+            }
+        }
+
         if self.queue.len() > 100000000 {
             println!("Reducing queue size");
             let mut new_queue = BinaryHeap::new();
@@ -724,59 +359,42 @@ impl<'a> Computation<'a> {
         }
     }
 
-    fn register_shape(&mut self, element_or_ref: GivenOrNewElement<'a>) {
-        let shape = element_or_ref.get_shape();
-        if self.shapes.contains_key(shape) {
+    fn register_shape(&mut self, element_link: ElementLink<'a>) {
+        let shape = element_link.get_shape();
+        if self.shapes.contains_key(shape)
+            && (self.final_found_shape.is_none() || shape != self.final_found_shape.unwrap())
+        {
             // Actually one needs to verify whether new dependencies are less/different
             return;
         }
         if self.shapes_to_find.contains(shape) {
             self.found_shapes.insert(shape);
+            println!("{}", self.shapes_to_find.len());
+            for shape1 in &self.shapes_to_find {
+                println!("To find: {}", shape1);
+            }
             self.shapes_to_find.slow_remove(shape);
+            println!("Shape found: {}", shape);
+            println!(
+                "{} {}",
+                self.points_to_find.len(),
+                self.shapes_to_find.len()
+            );
             if self.points_to_find.len() == 0 && self.shapes_to_find.len() == 0 {
                 println!("Solution possibly found!");
+                if self.final_found_shape.is_none() {
+                    self.final_found_shape = Some(shape);
+                }
             }
         }
         let index = self.shape_origins.len_i32();
-        let mut combined_deps_with_index = 0;
-        let mut found_shape_mask = 0;
-        match &element_or_ref {
-            GivenOrNewElement::GivenElement { .. } => (),
-            GivenOrNewElement::TwoPointElement { element: _, action } => {
-                let point_origin_1 = &self.point_origins[action.point_index_1 as usize];
-                let point_origin_2 = &self.point_origins[action.point_index_2 as usize];
-                combined_deps_with_index =
-                    self.combine_deps(point_origin_1.deps, point_origin_2.deps, Some(index));
-                let point_origin_1 = &self.point_origins[action.point_index_1 as usize];
-                let point_origin_2 = &self.point_origins[action.point_index_2 as usize];
-                found_shape_mask =
-                    point_origin_1.found_shape_mask | point_origin_2.found_shape_mask;
-                match self.shape_to_find_mask_by_shape.get(shape) {
-                    None => (),
-                    Some(mask) => {
-                        found_shape_mask |= mask;
-                    }
-                }
-            }
-            GivenOrNewElement::PointAndLineElement { element: _, action } => {
-                let point_origin = &self.point_origins[action.point_index_1 as usize];
-                let line_origin = &self.shape_origins[action.extra_index as usize];
-                combined_deps_with_index =
-                    self.combine_deps(point_origin.deps, line_origin.deps, Some(index));
-                let point_origin = &self.point_origins[action.point_index_1 as usize];
-                let line_origin = &self.shape_origins[action.extra_index as usize];
-                found_shape_mask = point_origin.found_shape_mask | line_origin.found_shape_mask;
-                match self.shape_to_find_mask_by_shape.get(shape) {
-                    None => (),
-                    Some(mask) => {
-                        found_shape_mask |= mask;
-                    }
-                }
-            }
+        let (combined_deps_with_index, found_shape_mask) = match &element_link {
+            ElementLink::GivenElement { .. } => (0, 0),
+            ElementLink::Action(action) => action.process(self, index),
         };
         self.shapes.insert_if_new(shape, index);
         self.shape_origins.push(ShapeOrigin {
-            element_or_ref,
+            element_link,
             deps: combined_deps_with_index,
             found_shape_mask,
         });
@@ -807,7 +425,7 @@ impl<'a> Computation<'a> {
                 let reserved =
                     self.shape_to_find_mask_by_shape.len_u32() - combined_mask.count_ones();
                 if deps_count + reserved <= self.problem.action_count {
-                    let maybe_actions = self.check_action_point_and_line(i, index);
+                    let maybe_actions = Action::check_action_point_and_line(self, i, index);
                     for maybe_action in maybe_actions {
                         match maybe_action {
                             Some(action) => self.queue.push(action),
@@ -822,81 +440,11 @@ impl<'a> Computation<'a> {
     fn register_given_element(&mut self, element: &'a Element) {
         match element {
             Element::Point(point) => self.register_point(*point, [GIVEN, GIVEN]),
-            _ => self.register_shape(GivenOrNewElement::GivenElement {
+            _ => self.register_shape(ElementLink::GivenElement {
                 element,
                 shape: element.get_shape().unwrap(),
             }),
         };
-    }
-
-    fn create_two_point_element(
-        point1: &Point,
-        point2: &Point,
-        action_type: TwoPointActionType,
-    ) -> Element {
-        match action_type {
-            TwoPointActionType::Line => Element::LineAB(LineAB {
-                a: *point1,
-                b: *point2,
-            }),
-            TwoPointActionType::Circle12 => Element::CircleCP(CircleCP {
-                c: *point1,
-                p: *point2,
-            }),
-            TwoPointActionType::Circle21 => Element::CircleCP(CircleCP {
-                c: *point2,
-                p: *point1,
-            }),
-            TwoPointActionType::MidPerp => Element::MidPerpAB(MidPerpAB {
-                a: *point1,
-                b: *point2,
-            }),
-            TwoPointActionType::Last => panic!("Can't happen"),
-        }
-    }
-
-    fn create_point_and_line_element(
-        point: &Point,
-        line: &Shape,
-        action_type: PointAndLineActionType,
-    ) -> Element {
-        match action_type {
-            PointAndLineActionType::Perp => Element::LineAV(LineAV {
-                a: *point,
-                v: line.get_direction().unwrap().rotated_90_pos(),
-            }),
-            PointAndLineActionType::Par => Element::LineAV(LineAV {
-                a: *point,
-                v: line.get_direction().unwrap(),
-            }),
-            PointAndLineActionType::Last => panic!("Can't happen"),
-        }
-    }
-
-    fn create_and_register_element(&mut self, action: Action) {
-        let element_or_ref = match action.action_type {
-            ActionType::TwoPointActionType(two_point_action_type) => {
-                GivenOrNewElement::TwoPointElement {
-                    element: Self::create_two_point_element(
-                        &self.point_origins[action.point_index_1 as usize].point,
-                        &self.point_origins[action.point_index_2 as usize].point,
-                        two_point_action_type,
-                    ),
-                    action,
-                }
-            }
-            ActionType::PointAndLineActionType(point_and_line_action_type) => {
-                GivenOrNewElement::PointAndLineElement {
-                    element: Self::create_point_and_line_element(
-                        &self.point_origins[action.point_index_1 as usize].point,
-                        &self.shape_origins[action.extra_index as usize].get_shape(),
-                        point_and_line_action_type,
-                    ),
-                    action,
-                }
-            }
-        };
-        self.register_shape(element_or_ref);
     }
 
     pub fn initialize_queue(&mut self) {
@@ -923,7 +471,7 @@ impl<'a> Computation<'a> {
         let mut rw_queue = Vec::new();
         for i in 0..1000000 {
             if self.queue.is_empty() {
-                // self.print_state();
+                self.draw_state("final.svg".to_string(), 5.0, HashSet::new());
                 println!("All actions explored");
                 break;
             }
@@ -947,17 +495,19 @@ impl<'a> Computation<'a> {
                 self.queue.push(action);
                 continue;
             }
-            self.create_and_register_element(action);
-            if self.found_points.len() == self.points_to_find.len()
-                && self.found_shapes.len() == self.shapes_to_find.len()
-            {
+            let shape = action.shape;
+            self.register_shape(ElementLink::Action(action));
+            if self.final_found_shape.is_some() && shape == self.final_found_shape.unwrap() {
                 println!("=== Printing solution! ===");
                 self.print_solution();
                 self.draw_solution("solution.svg".to_string(), 5.0);
-                println!("Finished in {} seconds", time.elapsed().unwrap().as_secs());
-                return;
+                println!(
+                    "Solution found in {} seconds",
+                    time.elapsed().unwrap().as_secs()
+                );
+                // return;
             }
-            // if i == 10 || i == 30 || i == 120 || i == 300 {
+            // if i == 10 {
             //     self.print_state();
             //     self.draw_state(format!("image{}.svg", i), 5.0, HashSet::new());
             // }

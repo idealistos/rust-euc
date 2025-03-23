@@ -2,7 +2,7 @@ use strum_macros::IntoStaticStr;
 
 use crate::{
     fint::FInt,
-    shape::{Circle, Line, Point, Ray, Shape, ShapeTrait},
+    shape::{Circle, Line, Point, Ray, Shape},
 };
 extern crate strum;
 
@@ -111,6 +111,29 @@ impl MidPerpAB {
     }
 }
 
+#[derive(Debug)]
+pub struct BisectorCVV {
+    pub c: Point,
+    pub v1: Point,
+    pub v2: Point,
+}
+impl BisectorCVV {
+    pub fn get_shape(&self) -> Line {
+        let len1 = (self.v1.0.sqr() + self.v1.1.sqr()).sqrt();
+        let len2 = (self.v2.0.sqr() + self.v2.1.sqr()).sqrt();
+        assert_ne!(len1, FInt::new(0.0));
+        assert_ne!(len2, FInt::new(0.0));
+        LineAV {
+            a: self.c,
+            v: Point(
+                self.v1.0 * len2 + self.v2.0 * len1,
+                self.v1.1 * len2 + self.v2.1 * len1,
+            ),
+        }
+        .get_shape()
+    }
+}
+
 #[derive(Debug, IntoStaticStr)]
 pub enum Element {
     Point(Point),
@@ -120,6 +143,7 @@ pub enum Element {
     CircleCP(CircleCP),
     CircleCR(CircleCR),
     MidPerpAB(MidPerpAB),
+    BisectorCVV(BisectorCVV),
     // SegmentAB(SegmentAB),
 }
 impl Element {
@@ -132,70 +156,7 @@ impl Element {
             Element::CircleCP(circle_cp) => Some(Shape::Circle(circle_cp.get_shape())),
             Element::CircleCR(circle_cr) => Some(Shape::Circle(circle_cr.get_shape())),
             Element::MidPerpAB(mid_perp_ab) => Some(Shape::Line(mid_perp_ab.get_shape())),
-        }
-    }
-
-    pub fn get_point_priority(&self, inspected_point: &Point) -> i32 {
-        match self {
-            Element::Point(point) => {
-                if *point == *inspected_point {
-                    10
-                } else {
-                    0
-                }
-            }
-            Element::LineAB(line_ab) => {
-                if line_ab.a == *inspected_point || line_ab.b == *inspected_point {
-                    10
-                } else if line_ab.get_shape().contains_point(inspected_point) {
-                    2
-                } else {
-                    0
-                }
-            }
-            Element::LineAV(line_av) => {
-                if line_av.a == *inspected_point {
-                    10
-                } else if line_av.get_shape().contains_point(inspected_point) {
-                    5
-                } else {
-                    0
-                }
-            }
-            Element::RayAV(ray_av) => {
-                if ray_av.a == *inspected_point {
-                    10
-                } else if ray_av.get_shape().contains_point(inspected_point) {
-                    5
-                } else {
-                    0
-                }
-            }
-            Element::CircleCP(circle_cp) => {
-                if circle_cp.c == *inspected_point {
-                    10
-                } else if circle_cp.get_shape().contains_point(inspected_point) {
-                    5
-                } else {
-                    0
-                }
-            }
-            Element::CircleCR(circle_cr) => {
-                if circle_cr.c == *inspected_point {
-                    10
-                } else if circle_cr.get_shape().contains_point(inspected_point) {
-                    5
-                } else {
-                    0
-                }
-            }
-            Element::MidPerpAB(mid_perp_ab) => {
-                if mid_perp_ab.get_shape().contains_point(inspected_point) {
-                    2
-                } else {
-                    0
-                }
-            }
+            Element::BisectorCVV(bisector_cvv) => Some(Shape::Line(bisector_cvv.get_shape())),
         }
     }
 }
