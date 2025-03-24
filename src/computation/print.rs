@@ -58,14 +58,11 @@ impl<'a> PrintState for Computation<'a> {
     }
 
     fn print_solution(&mut self) {
-        self.print_state();
-        let deps_list = self.get_solution_deps_list();
-        let mut deps_vec: Vec<&u64> = deps_list.iter().collect();
-        deps_vec.sort();
-        println!("Solution deps:");
-        for deps in deps_vec {
-            println!("{:b}", deps);
-        }
+        // self.print_state();
+        let deps_list = match self.solution_deps {
+            None => self.get_solution_deps_list(),
+            Some(deps) => HashSet::from([deps]),
+        };
         self.print_shapes(deps_list)
     }
 }
@@ -114,6 +111,7 @@ mod private {
                 let mut include = only_included_in_deps.is_empty();
                 for deps in &only_included_in_deps {
                     let origin = &self.shape_origins[i as usize];
+
                     if self.combine_deps(*deps, origin.deps, None) == *deps {
                         include = true;
                         break;

@@ -212,7 +212,7 @@ impl Action {
                         *two_point_action_type,
                     );
                     let new_shape = element.get_shape().unwrap();
-                    if comp.shapes.contains_key(new_shape) {
+                    if !comp.problem.multimatch && comp.shapes.contains_key(new_shape) {
                         None
                     } else {
                         Some(Action {
@@ -268,7 +268,7 @@ impl Action {
                         *point_and_line_action_type,
                     );
                     let new_shape = element.get_shape().unwrap();
-                    if comp.shapes.contains_key(new_shape) {
+                    if !comp.problem.multimatch && comp.shapes.contains_key(new_shape) {
                         None
                     } else {
                         Some(Action {
@@ -333,7 +333,7 @@ impl Action {
                         *two_point_action_type,
                     );
                     let new_shape = element.get_shape().unwrap();
-                    if comp.shapes.contains_key(new_shape) {
+                    if !comp.problem.multimatch && comp.shapes.contains_key(new_shape) {
                         None
                     } else {
                         Some(Action {
@@ -516,12 +516,32 @@ impl PriorityComputation for TwoPointActionType {
                 priority += 5;
             }
         }
+        if comp.problem.find_all_solutions {
+            for shape in &comp.found_shapes {
+                if shape.contains_point(&origin1.point) {
+                    priority += 5;
+                }
+                if shape.contains_point(&origin2.point) {
+                    priority += 5;
+                }
+            }
+        }
         if comp.shapes_to_find.contains(*shape) {
+            priority += 20;
+        }
+        if comp.problem.find_all_solutions && comp.found_shapes.contains(*shape) {
             priority += 20;
         }
         for point in &comp.points_to_find {
             if shape.contains_point(&point) {
                 priority += 5;
+            }
+        }
+        if comp.problem.find_all_solutions {
+            for point in &comp.found_points {
+                if shape.contains_point(&point) {
+                    priority += 5;
+                }
             }
         }
         priority

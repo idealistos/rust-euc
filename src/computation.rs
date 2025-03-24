@@ -34,7 +34,7 @@ mod print;
 mod random_walk;
 
 const GIVEN: i32 = -1;
-const RANDOM_WALK_LIMIT: u32 = 150000000;
+const RANDOM_WALK_LIMIT: u32 = 500000000;
 
 #[derive(Debug)]
 struct PointOrigin {
@@ -42,11 +42,13 @@ struct PointOrigin {
     deps: u64,
     shape_origin_indices: [i32; 2],
     found_shape_mask: u32,
+    next: i32,
 }
 struct ShapeOrigin<'a> {
     deps: u64,
     element_link: ElementLink<'a>,
     found_shape_mask: u32,
+    next: i32,
 }
 impl<'a> ShapeOrigin<'a> {
     pub fn get_shape(&self) -> Shape {
@@ -68,7 +70,7 @@ pub struct Computation<'a> {
     deps_combinations: Vec<Vec<u32>>,
     deps_indices_by_hashes: HashMap<u64, Vec<i32>>,
     shape_to_find_mask_by_shape: HashMap2<Shape, u32>,
-    final_found_shape: Option<Shape>,
+    solution_deps: Option<u64>,
 }
 impl<'a> Computation<'a> {
     pub fn new(problem: &'a ProblemDefinition) -> Self {
@@ -88,7 +90,7 @@ impl<'a> Computation<'a> {
             deps_combinations: vec![vec![]],
             deps_indices_by_hashes,
             shape_to_find_mask_by_shape: HashMap2::new(),
-            final_found_shape: None,
+            solution_deps: None,
         }
     }
 
@@ -118,6 +120,21 @@ impl<'a> Computation<'a> {
             }
         }
         lower_mask.count_ones() + deps_vec_1.len_u32() + deps_vec_2.len_u32() - same_count
+    }
+
+    fn get_deps_combined_with_index_count(&self, deps: u64, index: i32) -> u32 {
+        if index < 40 {
+            self.get_deps_count(deps | (1 << index))
+        } else if deps < (1u64 << 40) {
+            self.get_deps_count(deps) + 1
+        } else {
+            let deps_vec = &self.deps_combinations[(deps >> 40) as usize];
+            if deps_vec.contains(&(index as u32)) {
+                self.get_deps_count(deps)
+            } else {
+                self.get_deps_count(deps) + 1
+            }
+        }
     }
 
     #[allow(dead_code)]
@@ -163,6 +180,45 @@ impl<'a> Computation<'a> {
             + all_three_count
     }
 
+    fn get_index_of_deps_combination(&mut self, high_indices: &[u32]) -> i32 {
+        let mut sum = 0u32;
+        let mut sum2 = 0u32;
+        for i in high_indices {
+            sum += *i;
+            sum2 += *i * *i;
+        }
+        let hash = ((sum as u64) << 32u64) | (sum2 as u64);
+        let deps_indices = self.deps_indices_by_hashes.get(&hash);
+        match deps_indices {
+            None => {
+                let new_index = self.deps_combinations.len_i32();
+                self.deps_indices_by_hashes.insert(hash, vec![new_index]);
+                self.deps_combinations.push(high_indices.to_vec());
+                new_index
+            }
+            Some(indices) => {
+                let mut found_index = -1;
+                for index in indices {
+                    if high_indices == self.deps_combinations[*index as usize] {
+                        found_index = *index;
+                        break;
+                    }
+                }
+                if found_index < 0 {
+                    let new_index = self.deps_combinations.len_i32();
+                    self.deps_indices_by_hashes
+                        .get_mut(&hash)
+                        .unwrap()
+                        .push(new_index);
+                    self.deps_combinations.push(high_indices.to_vec());
+                    new_index
+                } else {
+                    found_index
+                }
+            }
+        }
+    }
+
     pub fn combine_deps(&mut self, deps1: u64, deps2: u64, index: Option<i32>) -> u64 {
         let mut buffer: [u32; 1000] = [0; 1000];
         let index_mask = match index {
@@ -188,47 +244,15 @@ impl<'a> Computation<'a> {
             size += 1;
         }
         buffer[0..size].sort_unstable();
-        let mut sum = 0u32;
-        let mut sum2 = 0u32;
         let mut j = 0;
         for i in 0..size {
             if i == 0 || buffer[i] != buffer[i - 1] {
-                sum += buffer[i];
-                sum2 += buffer[i] * buffer[i];
                 buffer[j] = buffer[i];
                 j += 1;
             }
         }
-        let hash = ((sum as u64) << 32u64) | (sum2 as u64);
-        let deps_indices = self.deps_indices_by_hashes.get(&hash);
-        let index = match deps_indices {
-            None => {
-                let new_index = self.deps_combinations.len_i32();
-                self.deps_indices_by_hashes.insert(hash, vec![new_index]);
-                self.deps_combinations.push(buffer[0..j].to_vec());
-                new_index
-            }
-            Some(indices) => {
-                let mut found_index = -1;
-                for index in indices {
-                    if buffer[0..j] == self.deps_combinations[*index as usize] {
-                        found_index = *index;
-                        break;
-                    }
-                }
-                if found_index < 0 {
-                    let new_index = self.deps_combinations.len_i32();
-                    self.deps_indices_by_hashes
-                        .get_mut(&hash)
-                        .unwrap()
-                        .push(new_index);
-                    self.deps_combinations.push(buffer[0..j].to_vec());
-                    new_index
-                } else {
-                    found_index
-                }
-            }
-        };
+
+        let index = self.get_index_of_deps_combination(&buffer[0..j]);
         lower_mask | ((index as u64) << 40)
     }
 
@@ -270,11 +294,165 @@ impl<'a> Computation<'a> {
         deps_list
     }
 
-    fn register_point(&mut self, point: Point, shape_origin_indices: [i32; 2]) {
-        if self.points.contains_key(point) {
+    // Order bits of all_deps and use indices corresponding to deps as bits for the result
+    fn compress(&self, deps: u64, all_deps: u64) -> u64 {
+        let deps_combination = &self.deps_combinations[(deps >> 40) as usize];
+        let index_set: HashSet<u32> = HashSet::from_iter(deps_combination.iter().cloned());
+        let mut index = 0;
+        let mut result = 0u64;
+        for i in 0..40 {
+            if (all_deps & (1 << i)) != 0 {
+                if deps & (1 << i) != 0 {
+                    result |= 1 << index;
+                }
+                index += 1;
+            }
+        }
+        for i in &self.deps_combinations[(all_deps >> 40) as usize] {
+            if index_set.contains(i) {
+                result |= 1 << index;
+            }
+            index += 1;
+        }
+        result
+    }
+
+    fn decompress(&mut self, union: u64, all_deps: u64) -> u64 {
+        let mut high_indices = [0; 100];
+        let mut high_index_count = 0;
+        let mut index = 0;
+        let mut lower_mask = 0u64;
+        for i in 0..40 {
+            if (all_deps & (1 << i)) != 0 {
+                if union & (1 << index) != 0 {
+                    lower_mask |= 1 << i;
+                }
+                index += 1;
+            }
+        }
+        for i in &self.deps_combinations[(all_deps >> 40) as usize] {
+            if union & (1 << index) != 0 {
+                high_indices[high_index_count] = *i;
+                high_index_count += 1;
+            }
+            index += 1;
+        }
+        let dep_combination_index =
+            self.get_index_of_deps_combination(&high_indices[0..high_index_count]);
+        ((dep_combination_index as u64) << 40) | lower_mask
+    }
+
+    fn find_shortest_deps_union(deps_lists: &Vec<Vec<u64>>, union_so_far: u64, index: u32) -> u64 {
+        if index == deps_lists.len_u32() {
+            return union_so_far;
+        }
+        let mut min_len = 64;
+        let mut best_deps = 0;
+        for deps in &deps_lists[index as usize] {
+            let to_check =
+                Self::find_shortest_deps_union(deps_lists, union_so_far | deps, index + 1);
+            let len = to_check.count_ones();
+            if len < min_len {
+                min_len = len;
+                best_deps = to_check;
+            }
+        }
+        best_deps
+    }
+
+    fn check_multimatch_solution_found(&mut self) {
+        if self.points_to_find.len() > 0 || self.shapes_to_find.len() > 0 {
             return;
         }
-        if self.points_to_find.contains(point) {
+        let mut all_relevant_deps = 0;
+        let points_copy: Vec<_> = self.found_points.iter().cloned().collect();
+        for point in &points_copy {
+            let mut index = self.points.get(*point).unwrap();
+            while index >= 0 {
+                let point_origin_deps = self.point_origins[index as usize].deps;
+                all_relevant_deps = self.combine_deps(all_relevant_deps, point_origin_deps, None);
+                index = self.point_origins[index as usize].next;
+            }
+        }
+        let shapes_copy: Vec<_> = self.found_shapes.iter().cloned().collect();
+        for shape in &shapes_copy {
+            let mut index = self.shapes.get(*shape).unwrap();
+            while index >= 0 {
+                let shape_origin_deps = self.shape_origins[index as usize].deps;
+                all_relevant_deps = self.combine_deps(all_relevant_deps, shape_origin_deps, None);
+                index = self.shape_origins[index as usize].next;
+            }
+        }
+        println!(
+            "All deps: {:b} (count: {})",
+            all_relevant_deps,
+            self.get_deps_count(all_relevant_deps)
+        );
+        let mut deps_lists = Vec::new();
+        for point in &points_copy {
+            let mut index = self.points.get(*point).unwrap();
+            let mut deps_list = Vec::new();
+            while index >= 0 {
+                let point_origin_deps = self.point_origins[index as usize].deps;
+                deps_list.push(self.compress(point_origin_deps, all_relevant_deps));
+                index = self.point_origins[index as usize].next;
+            }
+            deps_lists.push(deps_list);
+        }
+        for shape in &shapes_copy {
+            let mut index = self.shapes.get(*shape).unwrap();
+            let mut deps_list = Vec::new();
+            while index >= 0 {
+                let shape_origin_deps = self.shape_origins[index as usize].deps;
+                deps_list.push(self.compress(shape_origin_deps, all_relevant_deps));
+                index = self.shape_origins[index as usize].next;
+            }
+            deps_lists.push(deps_list);
+        }
+        for deps_list in &deps_lists {
+            println!("--");
+            for deps in deps_list {
+                println!("{:b}", deps);
+            }
+        }
+        let shortest_union = Self::find_shortest_deps_union(&deps_lists, 0, 0);
+        println!(
+            "Deps in the shortest union: {}",
+            shortest_union.count_ones()
+        );
+
+        if shortest_union.count_ones() <= self.problem.action_count {
+            self.solution_deps = Some(self.decompress(shortest_union, all_relevant_deps));
+            println!("Solution deps: {:b}", self.solution_deps.unwrap());
+        }
+    }
+
+    fn update_point_seen_before(&mut self, point: Point, index: i32, deps: u64) -> bool {
+        let mut i = self.points.get(point).unwrap();
+        while i >= 0 {
+            let point_origin = &self.point_origins[i as usize];
+            if self.get_combined_deps_count(point_origin.deps, deps) == self.get_deps_count(deps) {
+                return false;
+            }
+            let point_origin = &mut self.point_origins[i as usize];
+            i = point_origin.next;
+            if i < 0 {
+                // println!(
+                //     "Point seen multiple times: {} (deps: {:b} / {:b})",
+                //     point, point_origin.deps, deps
+                // );
+                point_origin.next = index;
+            }
+        }
+        true
+    }
+
+    fn register_point(&mut self, point: Point, shape_origin_indices: [i32; 2]) {
+        let seen_before = self.points.contains_key(point);
+        if seen_before && !self.problem.multimatch {
+            return;
+        }
+        if !seen_before && self.points_to_find.contains(point) {
             self.found_points.insert(point);
             self.points_to_find.slow_remove(point);
             if self.points_to_find.len() == 0 && self.shapes_to_find.len() == 0 {
@@ -298,18 +476,28 @@ impl<'a> Computation<'a> {
         };
         let combined_deps = self.combine_deps(deps1, deps2, None);
         if self.get_deps_count(combined_deps) > self.problem.action_count {
-            println!("Shouldn't happen");
+            println!(
+                "Shouldn't happen: deps count {} is above action count {}",
+                self.get_deps_count(combined_deps),
+                self.problem.action_count
+            );
             return;
         }
-        self.points
-            .insert_if_new(point, self.point_origins.len_i32());
         let index = self.point_origins.len_i32();
+        if seen_before && !self.update_point_seen_before(point, index, combined_deps) {
+            return;
+        }
+        self.points.insert_if_new(point, index);
         self.point_origins.push(PointOrigin {
             point,
             deps: combined_deps,
             shape_origin_indices,
             found_shape_mask,
+            next: -1,
         });
+        if self.problem.multimatch && self.found_points.contains(point) {
+            self.check_multimatch_solution_found();
+        }
         for i in 0..index {
             let maybe_actions = Action::check_action_two_points(self, i, index);
             for maybe_action in maybe_actions {
@@ -359,45 +547,66 @@ impl<'a> Computation<'a> {
         }
     }
 
+    fn update_shape_seen_before(&mut self, shape: Shape, index: i32, deps: u64) -> bool {
+        let mut i = self.shapes.get(shape).unwrap();
+        while i >= 0 {
+            let shape_origin = &self.shape_origins[i as usize];
+            if self.get_combined_deps_count(shape_origin.deps, deps)
+                == self.get_deps_combined_with_index_count(deps, i)
+            {
+                return false;
+            }
+            let shape_origin = &mut self.shape_origins[i as usize];
+            i = shape_origin.next;
+            if i < 0 {
+                // println!(
+                //     "Shape seen multiple times: {} (deps: {:b} / {:b})",
+                //     shape, shape_origin.deps, deps
+                // );
+                shape_origin.next = index;
+            }
+        }
+        true
+    }
+
     fn register_shape(&mut self, element_link: ElementLink<'a>) {
         let shape = element_link.get_shape();
-        if self.shapes.contains_key(shape)
-            && (self.final_found_shape.is_none() || shape != self.final_found_shape.unwrap())
-        {
-            // Actually one needs to verify whether new dependencies are less/different
+        let previous_index = self.shapes.get(shape);
+        let seen_before = previous_index.is_some();
+        if seen_before && !self.problem.multimatch {
             return;
         }
-        if self.shapes_to_find.contains(shape) {
+        if !seen_before && self.shapes_to_find.contains(shape) {
             self.found_shapes.insert(shape);
             println!("{}", self.shapes_to_find.len());
-            for shape1 in &self.shapes_to_find {
-                println!("To find: {}", shape1);
-            }
             self.shapes_to_find.slow_remove(shape);
-            println!("Shape found: {}", shape);
-            println!(
-                "{} {}",
-                self.points_to_find.len(),
-                self.shapes_to_find.len()
-            );
             if self.points_to_find.len() == 0 && self.shapes_to_find.len() == 0 {
                 println!("Solution possibly found!");
-                if self.final_found_shape.is_none() {
-                    self.final_found_shape = Some(shape);
-                }
             }
         }
-        let index = self.shape_origins.len_i32();
+        let current_index = self.shape_origins.len_i32();
+        let index = previous_index.unwrap_or(current_index);
         let (combined_deps_with_index, found_shape_mask) = match &element_link {
             ElementLink::GivenElement { .. } => (0, 0),
             ElementLink::Action(action) => action.process(self, index),
         };
-        self.shapes.insert_if_new(shape, index);
+        if seen_before
+            && !self.update_shape_seen_before(shape, current_index, combined_deps_with_index)
+        {
+            return;
+        }
+        if !seen_before {
+            self.shapes.insert_if_new(shape, index);
+        }
         self.shape_origins.push(ShapeOrigin {
             element_link,
             deps: combined_deps_with_index,
             found_shape_mask,
+            next: -1,
         });
+        if self.problem.multimatch && self.found_shapes.contains(shape) {
+            self.check_multimatch_solution_found();
+        }
         for i in 0..index {
             let shape_origin = &self.shape_origins[i as usize];
             let deps_count =
@@ -495,9 +704,8 @@ impl<'a> Computation<'a> {
                 self.queue.push(action);
                 continue;
             }
-            let shape = action.shape;
             self.register_shape(ElementLink::Action(action));
-            if self.final_found_shape.is_some() && shape == self.final_found_shape.unwrap() {
+            if self.solution_deps.is_some() {
                 println!("=== Printing solution! ===");
                 self.print_solution();
                 self.draw_solution("solution.svg".to_string(), 5.0);
@@ -505,7 +713,10 @@ impl<'a> Computation<'a> {
                     "Solution found in {} seconds",
                     time.elapsed().unwrap().as_secs()
                 );
-                // return;
+                if !self.problem.find_all_solutions {
+                    return;
+                }
+                self.solution_deps = None;
             }
             // if i == 10 {
             //     self.print_state();
@@ -543,14 +754,21 @@ impl<'a> Computation<'a> {
                 time.elapsed().unwrap().as_secs(),
             );
             let limit = RANDOM_WALK_LIMIT / random_walks.len_u32();
-            let _rw_results: Vec<Option<RandomWalkSolution>> = random_walks
+            let rw_results: Vec<RandomWalkSolution> = random_walks
                 .par_iter()
-                .map(|rw| rw.run_iterations(limit))
+                .filter_map(|rw| rw.run_iterations(limit))
                 .collect();
             println!(
                 "Ended random walks, time: {}",
                 time.elapsed().unwrap().as_secs(),
             );
+            for i in 0..rw_results.len_u32() {
+                Self::draw_shapes(
+                    &rw_results[i as usize].shapes,
+                    format!("rw_solution_{}.svg", i),
+                    5.0,
+                );
+            }
         }
     }
 }

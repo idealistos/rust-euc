@@ -12,6 +12,7 @@ use svg::Document;
 pub trait DrawState {
     fn draw_state(&mut self, filename: String, hw: f64, only_included_in_deps: HashSet<u64>);
     fn draw_solution(&mut self, filename: String, hw: f64);
+    fn draw_shapes(shapes: &Vec<Shape>, filename: String, hw: f64);
     fn draw_shapes_from_file(input_filename: String, filename: String, hw: f64);
 }
 impl<'a> DrawState for Computation<'a> {
@@ -139,6 +140,10 @@ impl<'a> DrawState for Computation<'a> {
             .lines()
             .filter_map(|s| Shape::from_str(s).ok())
             .collect();
+        Self::draw_shapes(&shapes, filename, hw);
+    }
+
+    fn draw_shapes(shapes: &Vec<Shape>, filename: String, hw: f64) {
         let colors = [
             "darkgray",
             "blue",

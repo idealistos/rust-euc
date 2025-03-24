@@ -7,7 +7,9 @@ use rand::{rng, Rng};
 
 const NEW_SHAPE_MULTIPLIER: u32 = 4;
 
-pub struct RandomWalkSolution {}
+pub struct RandomWalkSolution {
+    pub shapes: Vec<Shape>,
+}
 
 pub struct RandomWalkParent {
     pt_index_counts: Vec<u32>,
@@ -123,10 +125,10 @@ impl<'a> RandomWalk<'a> {
                         .any(|point| shapes[(i - 1) as usize].contains_point(point))
                 };
                 if check {
-                    println!("Candidate found");
-                    for i in 0..i_max {
-                        println!("  - {}", shapes[i as usize]);
-                    }
+                    // println!("Candidate found");
+                    // for i in 0..i_max {
+                    //     println!("  - {}", shapes[i as usize]);
+                    // }
                     let mut new_shapes_set = HashSet2::new();
                     for i1 in self.parent.given_shape_count..i_max {
                         new_shapes_set.insert(shapes[i1 as usize]);
@@ -151,7 +153,9 @@ impl<'a> RandomWalk<'a> {
                             println!("  - {}", shapes[i_shape as usize]);
                         }
                         *self.parent.solution_found.write().unwrap() = true;
-                        return Some(RandomWalkSolution {});
+                        return Some(RandomWalkSolution {
+                            shapes: shapes[0..(i_max as usize)].to_vec(),
+                        });
                     }
                 }
             }

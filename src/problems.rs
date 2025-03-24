@@ -63,6 +63,8 @@ pub struct ProblemDefinition {
     pub action_types: &'static [ActionType],
     pub random_walk_at_n_actions: Option<u32>,
     pub prioritize_low_action_count_shapes: bool,
+    pub multimatch: bool,
+    pub find_all_solutions: bool,
 }
 #[allow(dead_code)]
 impl ProblemDefinition {
@@ -73,6 +75,8 @@ impl ProblemDefinition {
         action_types: &[ActionType::LINE, ActionType::CIRCLE12, ActionType::CIRCLE21],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
+        multimatch: false,
+        find_all_solutions: false,
     };
 
     const LIMITED_ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -88,6 +92,8 @@ impl ProblemDefinition {
         ],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
+        multimatch: false,
+        find_all_solutions: false,
     };
 
     const ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -104,6 +110,8 @@ impl ProblemDefinition {
         ],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
+        multimatch: false,
+        find_all_solutions: false,
     };
 
     const FULL_WITHOUT_BISECTOR: ProblemDefinition = ProblemDefinition {
@@ -123,6 +131,8 @@ impl ProblemDefinition {
         ],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
+        multimatch: false,
+        find_all_solutions: false,
     };
 
     const FULL: ProblemDefinition = ProblemDefinition {
@@ -145,6 +155,8 @@ impl ProblemDefinition {
         ],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
+        multimatch: false,
+        find_all_solutions: false,
     };
 
     pub fn has_point_and_line_actions(&self) -> bool {
@@ -188,6 +200,8 @@ impl ProblemDefinition {
             ],
             random_walk_at_n_actions: None,
             prioritize_low_action_count_shapes: true,
+            multimatch: false,
+            find_all_solutions: false,
         }
     }
 
@@ -212,6 +226,62 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: p3, b: p0 }),
             ],
             action_count: 7,
+            ..Self::BASIC
+        }
+    }
+
+    fn inscribed_square_problem_1_7_mm() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p0 = pt(0.0, -1.0);
+        let p1 = pt(1.0, 0.0);
+        let p2 = pt(0.0, 1.0);
+        let p3 = pt(-1.0, 0.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p: p0 }),
+                Element::Point(p0),
+                Element::Point(c),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: p0, b: p1 }),
+                Element::LineAB(LineAB { a: p1, b: p2 }),
+                Element::LineAB(LineAB { a: p2, b: p3 }),
+                Element::LineAB(LineAB { a: p3, b: p0 }),
+            ],
+            action_count: 7,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
+    fn inscribed_square_problem_1_7_mm_mod() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p0 = pt(0.0, -1.0);
+        let p1 = pt(1.0, 0.0);
+        let p2 = pt(0.0, 1.0);
+        let p3 = pt(-1.0, 0.0);
+        // let p_additional = pt(0.6213, -(1.0f64 - 0.6213f64 * 0.6213f64).sqrt());
+        let p_additional = pt(0.324234, -0.346523465);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p: p0 }),
+                Element::Point(p0),
+                Element::Point(c),
+                Element::Point(p_additional),
+            ],
+            elements_to_find: vec![
+                // Element::LineAB(LineAB { a: p0, b: p1 }),
+                Element::LineAB(LineAB { a: p1, b: p2 }),
+                // Element::LineAB(LineAB { a: p2, b: p3 }),
+                // Element::LineAB(LineAB { a: p3, b: p0 }),
+            ],
+            action_count: 4,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            find_all_solutions: true,
             ..Self::BASIC
         }
     }
@@ -282,6 +352,8 @@ impl ProblemDefinition {
             ],
             random_walk_at_n_actions: None,
             prioritize_low_action_count_shapes: true,
+            multimatch: false,
+            find_all_solutions: false,
         }
     }
 
@@ -305,6 +377,33 @@ impl ProblemDefinition {
                 Element::Point(xp2),
             ],
             action_count: 7, // Unclear whether it can be solved in 6 actions
+            ..Self::BASIC
+        }
+    }
+
+    fn equilateral_triangle_in_circle_problem_4_4_mm_mod() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(1.0, 0.0);
+        // let p2 = pt(0.1, 0.99f64.sqrt());
+        let p_additional = pt(0.6213, -(1.0f64 - 0.6213f64 * 0.6213f64).sqrt());
+        let xp1 = pt(-0.5, 0.75f64.sqrt());
+        let xp2 = pt(-0.5, -(0.75f64.sqrt()));
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p }),
+                Element::Point(p),
+                Element::Point(p_additional),
+            ],
+            elements_to_find: vec![
+                // Element::LineAB(LineAB { a: xp1, b: p }),
+                // Element::LineAB(LineAB { a: xp2, b: p }),
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                // Element::Point(xp1),
+                // Element::Point(xp2),
+            ],
+            action_count: 5,
+            multimatch: true,
+            find_all_solutions: true,
             ..Self::BASIC
         }
     }
@@ -563,6 +662,42 @@ impl ProblemDefinition {
         }
     }
 
+    fn circumscribed_square_5_8_mm_mod() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(0.0, 1.0);
+        let p2 = pt(0.31482564, -3.5234576);
+        let v = pt(1.0, 0.0);
+        let px1 = pt(1.0, 1.0);
+        let px2 = pt(1.0, -1.0);
+        let px3 = pt(-1.0, -1.0);
+        let px4 = pt(-1.0, 1.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCP(CircleCP { c, p }),
+                Element::LineAV(LineAV { a: p2, v }),
+                Element::Point(c),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                // Element::LineAB(LineAB { a: px1, b: px2 }),
+                // Element::LineAB(LineAB { a: px2, b: px3 }),
+                // Element::LineAB(LineAB { a: px3, b: px4 }),
+                // Element::LineAB(LineAB { a: px4, b: px1 }),
+                Element::Point(px1),
+                // Element::Point(px2),
+                // Element::Point(px3),
+                // Element::Point(px4),
+            ],
+            action_count: 7,
+            // multimatch: true,
+            // find_all_solutions: true,
+            random_walk_at_n_actions: Some(4),
+            // prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
     fn circle_tangent_to_square_side_5_10() -> ProblemDefinition {
         let p1 = pt(1.0, 1.0);
         let p2 = pt(1.0, -1.0);
@@ -587,6 +722,36 @@ impl ProblemDefinition {
                 Element::Point(px),
             ],
             action_count: 6,
+            ..Self::BASIC
+        }
+    }
+
+    fn circle_tangent_to_square_side_5_10_rw_mod() -> ProblemDefinition {
+        let p1 = pt(1.0, 1.0);
+        let p2 = pt(1.0, -1.0);
+        let p3 = pt(-1.0, -1.0);
+        let p4 = pt(-1.0, 1.0);
+
+        let px = pt(0.0, -0.25);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAB(LineAB { a: p1, b: p2 }),
+                Element::LineAB(LineAB { a: p2, b: p3 }),
+                Element::LineAB(LineAB { a: p3, b: p4 }),
+                Element::LineAB(LineAB { a: p4, b: p1 }),
+                // Element::Point(p1),
+                // Element::Point(p2),
+                // Element::Point(p3),
+                // Element::Point(p4),
+            ],
+            elements_to_find: vec![
+                // Element::CircleCP(CircleCP { c: px, p: p1 }),
+                Element::Point(px),
+            ],
+            action_count: 5,
+            multimatch: true,
+            random_walk_at_n_actions: Some(4),
             ..Self::BASIC
         }
     }
@@ -836,16 +1001,17 @@ impl ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p1 = pt(1.2345, 0.0);
         // tan 75 = sqrt((1 - cos 150) / (1 + cos 150)) = (1 + r3 / 2) / (1/2)
-        let p2 = pt(1.0, 2.0 + 3.0f64.sqrt());
+        let px = pt(1.0, 2.0 + 3.0f64.sqrt());
         ProblemDefinition {
             given_elements: vec![
                 Element::RayAV(RayAV { a: c, v: p1 }),
                 Element::Point(c),
                 Element::Point(p1),
             ],
-            elements_to_find: vec![Element::LineAB(LineAB { a: c, b: p2 })],
-            action_count: 4,
-            ..Self::FULL_WITHOUT_BISECTOR
+            elements_to_find: vec![Element::LineAB(LineAB { a: c, b: px })],
+            action_count: 3,
+            prioritize_low_action_count_shapes: false,
+            ..Self::FULL
         }
     }
 
@@ -952,11 +1118,12 @@ impl ProblemDefinition {
                 Element::LineAV(LineAV { a: p, v }),
                 Element::LineAV(LineAV { a: px1, v: v2 }),
                 Element::LineAV(LineAV { a: px2, v: v2 }),
-                Element::Point(p_additional),
+                // Element::Point(p_additional),
             ],
             elements_to_find: vec![Element::CircleCP(CircleCP { c: cx, p })],
             action_count: 6,
             random_walk_at_n_actions: Some(4),
+            multimatch: true,
             ..Self::BASIC
         }
     }
@@ -1046,6 +1213,76 @@ impl ProblemDefinition {
         }
     }
 
+    fn angle_54_trisection_8_2_mm() -> ProblemDefinition {
+        // tan 54 = sqrt(1 + 2 / sqrt(5))
+        // tan 18 = sqrt(1 - 2 / sqrt(5))
+        // tan 36 = sqrt(5 - 2 sqrt(5))
+        let c = pt(0.0, 0.0);
+        let a = pt(1.0, 0.0);
+        let b = pt(1.0, (1.0 + 2.0 / 5.0f64.sqrt()).sqrt());
+        let px1 = pt(1.0, (1.0 - 2.0 / 5.0f64.sqrt()).sqrt());
+        let px2 = pt(1.0, (5.0 - 2.0 * 5.0f64.sqrt()).sqrt());
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::RayAV(RayAV { a: c, v: a }),
+                Element::RayAV(RayAV { a: c, v: b }),
+                Element::Point(c),
+                Element::Point(a),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: c, b: px1 }),
+                Element::LineAB(LineAB { a: c, b: px2 }),
+            ],
+            action_count: 5,
+            multimatch: true,
+            // find_all_solutions: true,
+            ..Self::BASIC
+        }
+    }
+
+    fn interior_angles_8_3() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let v1 = pt(1.0, 0.57743);
+        let v2 = pt(1.0, -0.57743);
+        let p = pt(2.0, 2.1341342);
+        let vx = pt(0.0, 1.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAV(LineAV { a: c, v: v1 }),
+                Element::LineAV(LineAV { a: c, v: v2 }),
+                Element::Point(p),
+            ],
+            elements_to_find: vec![Element::LineAV(LineAV { a: p, v: vx })],
+            action_count: 4,
+            multimatch: true,
+            ..Self::BASIC
+        }
+    }
+
+    fn triangle_cleaver_8_5_adv() -> ProblemDefinition {
+        // Heronian triangle (21, 20, 13), area = 126, h = 12.6
+        let a = pt(0.0, 1.26);
+        let b = pt(-1.68, 0.0);
+        let c = pt(0.32, 0.0);
+        let px = pt(-0.68, 0.0);
+        let py = pt(-1.68 * 4.0 / 21.0, 1.26 * 17.0 / 21.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::LineAB(LineAB { a, b }),
+                Element::LineAB(LineAB { a, b: c }),
+                Element::LineAB(LineAB { a: c, b }),
+            ],
+            elements_to_find: vec![Element::LineAB(LineAB { a: px, b: py })],
+            action_count: 3,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            find_all_solutions: true,
+            ..Self::FULL_WITHOUT_BISECTOR
+        }
+    }
+
     fn chord_trisection_10_8() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
@@ -1068,8 +1305,9 @@ impl ProblemDefinition {
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        // Self::perimeter_bisector_8_1_adv()
-        Self::parallelogram_by_three_midpoints_6_11_full_partial()
+        Self::triangle_cleaver_8_5_adv()
+        // Self::circle_tangent_to_three_lines_7_8_rw_alt()
+        // Self::parallelogram_by_three_midpoints_6_11_full_partial()
         // Self::midpoint_problem_1_3()
 
         // Self::chord_trisection_10_8()
@@ -1112,5 +1350,10 @@ impl ProblemDefinition {
         // Self::herons_problem_7_5() - added an unneeded action
         // Self::segment_by_midpoint_7_9_adv()
         // Self::angle_isosceles_7_10()
+        // Self::angle_54_trisection_8_2_mm()
+        // Self::interior_angles_8_3()
+
+        // Solved with random walk
+        // Self::circle_tangent_to_square_side_5_10_rw_mod()
     }
 }

@@ -97,6 +97,10 @@ impl FInt {
     pub fn well_formed(&self) -> bool {
         !self.0.is_nan() && !self.1.is_nan()
     }
+
+    pub fn precise(&self) -> bool {
+        self.well_formed() && self.1 - self.0 < f64::max(1e-5 * self.0.abs(), 1e-10)
+    }
 }
 
 impl ops::Add<FInt> for FInt {

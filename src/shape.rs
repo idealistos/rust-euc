@@ -49,7 +49,7 @@ impl Point {
     }
 
     pub fn well_formed(&self) -> bool {
-        self.0.well_formed() && self.1.well_formed()
+        self.0.precise() && self.1.precise()
     }
 
     pub fn distance_to(&self, point: &Point) -> FInt {
@@ -107,7 +107,7 @@ impl ShapeTrait for Line {
     }
 
     fn well_formed(&self) -> bool {
-        self.nx.well_formed() && self.ny.well_formed() && self.d.well_formed()
+        self.nx.precise() && self.ny.precise() && self.d.precise()
     }
 }
 impl Display for Line {
@@ -221,7 +221,7 @@ impl ShapeTrait for Circle {
     }
 
     fn well_formed(&self) -> bool {
-        self.c.well_formed() && self.r2.well_formed()
+        self.c.well_formed() && self.r2.precise()
     }
 }
 impl Display for Circle {
