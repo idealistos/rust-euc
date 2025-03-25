@@ -88,6 +88,7 @@ mod private {
             let name = match origin.get_shape() {
                 Shape::Line(_line) => "Line",
                 Shape::Ray(_ray) => "Ray",
+                Shape::Segment(_segment) => "Segment",
                 Shape::Circle(_circle) => "Circle",
             };
             return format!("{prefix}{name}{shape_index}");

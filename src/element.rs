@@ -2,7 +2,7 @@ use strum_macros::IntoStaticStr;
 
 use crate::{
     fint::FInt,
-    shape::{Circle, Line, Point, Ray, Shape},
+    shape::{Circle, Line, Point, Ray, Segment, Shape},
 };
 extern crate strum;
 
@@ -96,6 +96,20 @@ impl RayAV {
 }
 
 #[derive(Debug)]
+pub struct SegmentAB {
+    pub a: Point,
+    pub b: Point,
+}
+impl SegmentAB {
+    pub fn get_shape(&self) -> Segment {
+        Segment {
+            a: self.a,
+            b: self.b,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct MidPerpAB {
     pub a: Point,
     pub b: Point,
@@ -140,6 +154,7 @@ pub enum Element {
     LineAB(LineAB),
     LineAV(LineAV),
     RayAV(RayAV),
+    SegmentAB(SegmentAB),
     CircleCP(CircleCP),
     CircleCR(CircleCR),
     MidPerpAB(MidPerpAB),
@@ -153,6 +168,7 @@ impl Element {
             Element::LineAB(line_ab) => Some(Shape::Line(line_ab.get_shape())),
             Element::LineAV(line_av) => Some(Shape::Line(line_av.get_shape())),
             Element::RayAV(ray_av) => Some(Shape::Ray(ray_av.get_shape())),
+            Element::SegmentAB(segment_ab) => Some(Shape::Segment(segment_ab.get_shape())),
             Element::CircleCP(circle_cp) => Some(Shape::Circle(circle_cp.get_shape())),
             Element::CircleCR(circle_cr) => Some(Shape::Circle(circle_cr.get_shape())),
             Element::MidPerpAB(mid_perp_ab) => Some(Shape::Line(mid_perp_ab.get_shape())),

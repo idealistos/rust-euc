@@ -1,5 +1,5 @@
 use crate::{
-    element::{CircleCP, CircleCR, Element, LineAB, LineAV, RayAV},
+    element::{CircleCP, CircleCR, Element, LineAB, LineAV, RayAV, SegmentAB},
     fint::FInt,
     shape::{Point, Shape, ShapeTrait},
 };
@@ -1260,6 +1260,35 @@ impl ProblemDefinition {
         }
     }
 
+    fn triangle_cleaver_8_5_rw() -> ProblemDefinition {
+        let h = 1.65239;
+        let x1 = -0.86762;
+        let x2 = 0.52374;
+        let a = pt(0.0, h);
+        let b = pt(x1, 0.0);
+        let c = pt(x2, 0.0);
+        let l1 = (x1 * x1 + h * h).sqrt();
+        let l2 = (x2 * x2 + h * h).sqrt();
+        let k = 0.5 * (l1 - l2) / l2;
+        let px1 = pt(k * x1, h - k * h);
+        let px2 = pt(0.5 * (x1 + x2), 0.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+            ],
+            elements_to_find: vec![Element::LineAB(LineAB { a: px1, b: px2 })],
+            action_count: 7,
+            multimatch: true,
+            // prioritize_low_action_count_shapes: false,
+            random_walk_at_n_actions: Some(4),
+            // find_all_solutions: true,
+            ..Self::BASIC
+        }
+    }
+
     fn triangle_cleaver_8_5_adv() -> ProblemDefinition {
         // Heronian triangle (21, 20, 13), area = 126, h = 12.6
         let a = pt(0.0, 1.26);
@@ -1275,11 +1304,56 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: c, b }),
             ],
             elements_to_find: vec![Element::LineAB(LineAB { a: px, b: py })],
-            action_count: 3,
+            action_count: 4,
             multimatch: true,
             prioritize_low_action_count_shapes: false,
             find_all_solutions: true,
             ..Self::FULL_WITHOUT_BISECTOR
+        }
+    }
+
+    fn torricelli_point_8_6_rw() -> ProblemDefinition {
+        let o = pt(0.0, 0.0);
+        let a = pt(0.0, 1.22348);
+        let k1 = 1.328783;
+        let k2 = 1.787345;
+        let b = pt(-k1 * 0.75f64.sqrt(), -0.5 * k1);
+        let c = pt(k2 * 0.75f64.sqrt(), -0.5 * k2);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+            ],
+            elements_to_find: vec![Element::Point(o)],
+            action_count: 5,
+            multimatch: true,
+            // prioritize_low_action_count_shapes: false,
+            random_walk_at_n_actions: Some(4),
+            // find_all_solutions: true,
+            ..Self::BASIC
+        }
+    }
+
+    fn torricelli_point_8_6_adv() -> ProblemDefinition {
+        let o = pt(0.0, 0.0);
+        let a = pt(0.0, 1.22348);
+        let k1 = 1.328783;
+        let k2 = 1.787345;
+        let b = pt(-k1 * 0.75f64.sqrt(), -0.5 * k1);
+        let c = pt(k2 * 0.75f64.sqrt(), -0.5 * k2);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+            ],
+            elements_to_find: vec![Element::Point(o)],
+            action_count: 4,
+            multimatch: true,
+            ..Self::FULL
         }
     }
 
@@ -1305,7 +1379,7 @@ impl ProblemDefinition {
     }
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::triangle_cleaver_8_5_adv()
+        Self::triangle_cleaver_8_5_rw()
         // Self::circle_tangent_to_three_lines_7_8_rw_alt()
         // Self::parallelogram_by_three_midpoints_6_11_full_partial()
         // Self::midpoint_problem_1_3()
@@ -1352,8 +1426,10 @@ impl ProblemDefinition {
         // Self::angle_isosceles_7_10()
         // Self::angle_54_trisection_8_2_mm()
         // Self::interior_angles_8_3()
+        // Self::torricelli_point_8_6_adv() (required setting priority for found_point to 500)
 
         // Solved with random walk
         // Self::circle_tangent_to_square_side_5_10_rw_mod()
+        // Self::torricelli_point_8_6_rw()
     }
 }

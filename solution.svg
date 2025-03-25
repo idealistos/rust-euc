@@ -1,19 +1,26 @@
 <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
-<line fill="none" stroke="darkgray" stroke-width="3" x1="1311" x2="-608" y1="-384" y2="1055"/>
-<line fill="none" stroke="darkgray" stroke-width="3" x1="128" x2="719" y1="-769" y2="1556"/>
-<line fill="none" stroke="darkgray" stroke-width="3" x1="-800" x2="1600" y1="400" y2="400"/>
-<line fill="none" stroke="blue" stroke-width="3" x1="425" x2="425" y1="-800" y2="1600"/>
-<line fill="none" stroke="blue" stroke-width="3" x1="425" x2="425" y1="-800" y2="1600"/>
-<circle cx="400" cy="300" fill="none" r="32" stroke="green" stroke-width="3"/>
-<line fill="none" stroke="red" stroke-width="1" x1="751" x2="-47" y1="-748" y2="1514"/>
-<circle cx="400" cy="300" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
-<circle cx="265" cy="400" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
-<circle cx="425" cy="400" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
-<circle cx="425" cy="280" fill="black" r="2" stroke="blue" stroke-width="2"/>
-<circle cx="374" cy="319" fill="black" r="2" stroke="green" stroke-width="2"/>
-<circle cx="407" cy="331" fill="black" r="2" stroke="green" stroke-width="2"/>
-<circle cx="392" cy="269" fill="black" r="2" stroke="green" stroke-width="2"/>
-<circle cx="425" cy="319" fill="black" r="2" stroke="green" stroke-width="2"/>
-<circle cx="345" cy="400" fill="black" r="2" stroke="red" stroke-width="2"/>
-<circle cx="425" cy="174" fill="black" r="2" stroke="red" stroke-width="2"/>
+<line fill="none" stroke="darkgray" stroke-width="3" x1="400" x2="307" y1="303" y2="454"/>
+<line fill="none" stroke="darkgray" stroke-width="3" x1="400" x2="523" y1="303" y2="472"/>
+<line fill="none" stroke="darkgray" stroke-width="3" x1="523" x2="307" y1="472" y2="454"/>
+<circle cx="400" cy="303" fill="none" r="176" stroke="blue" stroke-width="3"/>
+<circle cx="307" cy="454" fill="none" r="176" stroke="blue" stroke-width="3"/>
+<line fill="none" stroke="red" stroke-width="1" x1="-639" x2="1439" y1="-200" y2="1000"/>
+<line fill="none" stroke="purple" stroke-width="1" x1="1439" x2="-639" y1="-200" y2="1000"/>
+<circle cx="400" cy="303" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
+<circle cx="307" cy="454" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
+<circle cx="523" cy="472" fill="black" r="2" stroke="darkgray" stroke-width="2"/>
+<circle cx="504" cy="445" fill="black" r="2" stroke="blue" stroke-width="2"/>
+<circle cx="465" cy="467" fill="black" r="2" stroke="blue" stroke-width="2"/>
+<circle cx="479" cy="412" fill="black" r="2" stroke="blue" stroke-width="2"/>
+<circle cx="484" cy="469" fill="black" r="2" stroke="blue" stroke-width="2"/>
+<circle cx="484" cy="458" fill="black" r="2" stroke="green" stroke-width="2"/>
+<circle cx="223" cy="298" fill="black" r="2" stroke="green" stroke-width="2"/>
+<circle cx="355" cy="375" fill="black" r="2" stroke="red" stroke-width="2"/>
+<circle cx="492" cy="454" fill="black" r="2" stroke="red" stroke-width="2"/>
+<circle cx="484" cy="449" fill="black" r="2" stroke="red" stroke-width="2"/>
+<circle cx="450" cy="371" fill="black" r="2" stroke="purple" stroke-width="2"/>
+<circle cx="576" cy="298" fill="black" r="2" stroke="purple" stroke-width="2"/>
+<circle cx="154" cy="542" fill="black" r="2" stroke="purple" stroke-width="2"/>
+<circle cx="461" cy="365" fill="black" r="2" stroke="purple" stroke-width="2"/>
+<circle cx="400" cy="400" fill="black" r="2" stroke="purple" stroke-width="2"/>
 </svg>

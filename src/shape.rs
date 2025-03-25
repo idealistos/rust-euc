@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{fint::FInt, hashset2::WithTwoHashes};
+use crate::{element::LineAB, fint::FInt, hashset2::WithTwoHashes};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Point(pub FInt, pub FInt);
@@ -94,6 +94,7 @@ impl ShapeTrait for Line {
         match shape {
             Shape::Line(line) => [self.intersect_with_line(&line), None],
             Shape::Ray(ray) => [ray.intersect_with_line(&self), None],
+            Shape::Segment(segment) => [segment.intersect_with_line(&self), None],
             Shape::Circle(circle) => self.intersect_with_circle(&circle),
         }
     }
@@ -208,6 +209,7 @@ impl ShapeTrait for Circle {
         match shape {
             Shape::Line(line) => line.intersect_with_circle(self),
             Shape::Ray(ray) => ray.intersect_with_circle(self),
+            Shape::Segment(segment) => segment.intersect_with_circle(&self),
             Shape::Circle(circle) => self.intersect_with_circle(&circle),
         }
     }
@@ -314,6 +316,7 @@ impl ShapeTrait for Ray {
         match shape {
             Shape::Line(line) => [self.intersect_with_line(&line), None],
             Shape::Ray(ray) => [self.intersect_with_ray(&ray), None],
+            Shape::Segment(segment) => [segment.intersect_with_ray(&self), None],
             Shape::Circle(circle) => self.intersect_with_circle(&circle),
         }
     }
@@ -424,10 +427,140 @@ impl Ray {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Segment {
+    pub a: Point,
+    pub b: Point,
+}
+impl PartialEq for Segment {
+    fn eq(&self, x: &Segment) -> bool {
+        x.a == self.a && x.b == self.b
+    }
+}
+impl Eq for Segment {}
+impl WithTwoHashes for Segment {
+    fn hash1<H: Hasher>(&self, state: &mut H) {
+        self.a.hash1(state);
+        self.b.hash1(state);
+    }
+
+    fn hash2<H: Hasher>(&self, state: &mut H) {
+        self.a.hash2(state);
+        self.b.hash2(state);
+    }
+}
+impl ShapeTrait for Segment {
+    fn find_intersection_points(&self, shape: &Shape) -> [Option<Point>; 2] {
+        match shape {
+            Shape::Line(line) => [self.intersect_with_line(&line), None],
+            Shape::Ray(ray) => [self.intersect_with_ray(&ray), None],
+            Shape::Segment(segment) => [self.intersect_with_segment(&segment), None],
+            Shape::Circle(circle) => self.intersect_with_circle(&circle),
+        }
+    }
+
+    fn contains_point(&self, point: &Point) -> bool {
+        let line = self.as_line();
+        line.contains_point(point)
+            && !((self.a.0 - point.0) * (self.b.0 - point.0)
+                + (self.a.1 - point.1) * (self.b.1 - point.1))
+                .always_positive()
+    }
+
+    fn get_direction(&self) -> Option<Point> {
+        self.as_line().get_direction()
+    }
+
+    fn well_formed(&self) -> bool {
+        self.a.well_formed() && self.b.well_formed()
+    }
+}
+impl Display for Segment {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "Segment(a={},b={})", self.a, self.b)
+    }
+}
+impl FromStr for Segment {
+    type Err = String;
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+        Err("Not supported".to_string())
+    }
+}
+impl Segment {
+    fn as_line(&self) -> Line {
+        LineAB {
+            a: self.a,
+            b: self.b,
+        }
+        .get_shape()
+    }
+
+    fn intersect_with_line(&self, line: &Line) -> Option<Point> {
+        let line1 = self.as_line();
+        let point = line1.intersect_with_line(line)?;
+        if self.contains_point(&point) {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    fn intersect_with_ray(&self, ray: &Ray) -> Option<Point> {
+        let line1 = self.as_line();
+        let point = line1.intersect_with_line(&ray.as_line())?;
+        if self.contains_point(&point) && ray.contains_point(&point) {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    fn intersect_with_segment(&self, segment: &Segment) -> Option<Point> {
+        let line1 = self.as_line();
+        let point = line1.intersect_with_line(&segment.as_line())?;
+        if self.contains_point(&point) && segment.contains_point(&point) {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    fn intersect_with_circle(&self, circle: &Circle) -> [Option<Point>; 2] {
+        let line1 = self.as_line();
+        let points = line1.intersect_with_circle(circle);
+        let point1 = match points[0] {
+            None => None,
+            Some(point) => {
+                if self.contains_point(&point) {
+                    Some(point)
+                } else {
+                    None
+                }
+            }
+        };
+        let point2 = match points[1] {
+            None => None,
+            Some(point) => {
+                if self.contains_point(&point) {
+                    Some(point)
+                } else {
+                    None
+                }
+            }
+        };
+        if point1.is_none() {
+            [point2, point1]
+        } else {
+            [point1, point2]
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Shape {
     Line(Line),
     Ray(Ray),
+    Segment(Segment),
     Circle(Circle),
 }
 impl WithTwoHashes for Shape {
@@ -435,6 +568,7 @@ impl WithTwoHashes for Shape {
         match self {
             Shape::Line(line) => line.hash1(state),
             Shape::Ray(ray) => ray.hash1(state),
+            Shape::Segment(segment) => segment.hash1(state),
             Shape::Circle(circle) => circle.hash1(state),
         }
     }
@@ -443,6 +577,7 @@ impl WithTwoHashes for Shape {
         match self {
             Shape::Line(line) => line.hash2(state),
             Shape::Ray(ray) => ray.hash2(state),
+            Shape::Segment(segment) => segment.hash2(state),
             Shape::Circle(circle) => circle.hash2(state),
         }
     }
@@ -452,6 +587,7 @@ impl Display for Shape {
         match self {
             Shape::Line(line) => line.fmt(f),
             Shape::Ray(ray) => ray.fmt(f),
+            Shape::Segment(segment) => segment.fmt(f),
             Shape::Circle(circle) => circle.fmt(f),
         }
     }
@@ -461,6 +597,7 @@ impl ShapeTrait for Shape {
         match self {
             Shape::Line(line) => line.find_intersection_points(shape),
             Shape::Ray(ray) => ray.find_intersection_points(shape),
+            Shape::Segment(segment) => segment.find_intersection_points(shape),
             Shape::Circle(circle) => circle.find_intersection_points(shape),
         }
     }
@@ -469,6 +606,7 @@ impl ShapeTrait for Shape {
         match self {
             Shape::Line(line) => line.contains_point(point),
             Shape::Ray(ray) => ray.contains_point(point),
+            Shape::Segment(segment) => segment.contains_point(point),
             Shape::Circle(circle) => circle.contains_point(point),
         }
     }
@@ -477,6 +615,7 @@ impl ShapeTrait for Shape {
         match self {
             Shape::Line(line) => line.get_direction(),
             Shape::Ray(ray) => ray.get_direction(),
+            Shape::Segment(segment) => segment.get_direction(),
             Shape::Circle(_circle) => None,
         }
     }
@@ -485,6 +624,7 @@ impl ShapeTrait for Shape {
         match self {
             Shape::Line(line) => line.well_formed(),
             Shape::Ray(ray) => ray.well_formed(),
+            Shape::Segment(segment) => segment.well_formed(),
             Shape::Circle(circle) => circle.well_formed(),
         }
     }
@@ -498,6 +638,7 @@ impl FromStr for Shape {
             "Line" => Line::from_str(s).map(|line| Shape::Line(line)),
             "Circle" => Circle::from_str(s).map(|circle| Shape::Circle(circle)),
             "Ray" => Ray::from_str(s).map(|ray| Shape::Ray(ray)),
+            "Segment" => Segment::from_str(s).map(|segment| Shape::Segment(segment)),
             _ => Err("Wrong head: {}".to_string() + head),
         }
     }

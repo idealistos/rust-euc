@@ -34,7 +34,7 @@ mod print;
 mod random_walk;
 
 const GIVEN: i32 = -1;
-const RANDOM_WALK_LIMIT: u32 = 500000000;
+const RANDOM_WALK_LIMIT: u32 = 1000000000;
 
 #[derive(Debug)]
 struct PointOrigin {

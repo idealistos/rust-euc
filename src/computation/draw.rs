@@ -49,57 +49,10 @@ impl<'a> DrawState for Computation<'a> {
             let stroke_width = if deps_count <= 2 {
                 3
             } else {
-                (deps_count / 10) + 1
+                ((deps_count as i32) / 10) + 1
             };
-            document = match shape_origin.get_shape() {
-                Shape::Line(line) => document.add(
-                    svg::node::element::Line::new()
-                        .set(
-                            "x1",
-                            Self::to_svg(line.nx * line.d - FInt::new(3.0 * hw) * line.ny, hw),
-                        )
-                        .set(
-                            "y1",
-                            Self::to_svg_flip(line.ny * line.d + FInt::new(3.0 * hw) * line.nx, hw),
-                        )
-                        .set(
-                            "x2",
-                            Self::to_svg(line.nx * line.d + FInt::new(3.0 * hw) * line.ny, hw),
-                        )
-                        .set(
-                            "y2",
-                            Self::to_svg_flip(line.ny * line.d - FInt::new(3.0 * hw) * line.nx, hw),
-                        )
-                        .set("fill", "none")
-                        .set("stroke", color)
-                        .set("stroke-width", stroke_width),
-                ),
-                Shape::Ray(ray) => document.add(
-                    svg::node::element::Line::new()
-                        .set("x1", Self::to_svg(ray.a.0, hw))
-                        .set("y1", Self::to_svg_flip(ray.a.1, hw))
-                        .set(
-                            "x2",
-                            Self::to_svg(ray.a.0 + FInt::new(3.0 * hw) * ray.v.0, hw),
-                        )
-                        .set(
-                            "y2",
-                            Self::to_svg_flip(ray.a.1 + FInt::new(3.0 * hw) * ray.v.1, hw),
-                        )
-                        .set("fill", "none")
-                        .set("stroke", color)
-                        .set("stroke-width", stroke_width),
-                ),
-                Shape::Circle(circle) => document.add(
-                    svg::node::element::Circle::new()
-                        .set("cx", Self::to_svg(circle.c.0, hw))
-                        .set("cy", Self::to_svg_flip(circle.c.1, hw))
-                        .set("r", Self::to_svg(circle.r2.sqrt() - FInt::new(hw), hw))
-                        .set("fill", "none")
-                        .set("stroke", color)
-                        .set("stroke-width", stroke_width),
-                ),
-            };
+            document =
+                Self::draw_shape(document, &shape_origin.get_shape(), hw, color, stroke_width);
         }
         for i in 0..self.point_origins.len_i32() {
             let mut include = false;
@@ -239,6 +192,16 @@ mod private {
                             "y2",
                             Self::to_svg_flip(ray.a.1 + FInt::new(3.0 * hw) * ray.v.1, hw),
                         )
+                        .set("fill", "none")
+                        .set("stroke", color)
+                        .set("stroke-width", stroke_width),
+                ),
+                Shape::Segment(segment) => document.add(
+                    svg::node::element::Line::new()
+                        .set("x1", Self::to_svg(segment.a.0, hw))
+                        .set("y1", Self::to_svg_flip(segment.a.1, hw))
+                        .set("x2", Self::to_svg(segment.b.0, hw))
+                        .set("y2", Self::to_svg_flip(segment.b.1, hw))
                         .set("fill", "none")
                         .set("stroke", color)
                         .set("stroke-width", stroke_width),
