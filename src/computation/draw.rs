@@ -4,7 +4,6 @@ use std::str::FromStr;
 
 use crate::shape::Shape;
 use crate::Computation;
-use crate::FInt;
 use crate::VecLengths;
 use private::*;
 use svg::Document;
@@ -77,6 +76,33 @@ impl<'a> DrawState for Computation<'a> {
                     .set("fill", "black")
                     .set("stroke", color)
                     .set("stroke-width", 2),
+            );
+        }
+
+        let mut shapes_to_find = Vec::new();
+        self.shapes_to_find.iter().for_each(|shape| {
+            shapes_to_find.push(*shape);
+        });
+        for shape in shapes_to_find {
+            document = Self::draw_shape(document, &shape, hw, "black", 3);
+        }
+
+        let mut points_to_find = Vec::new();
+        self.found_points.iter().for_each(|point| {
+            points_to_find.push(*point);
+        });
+        self.points_to_find.iter().for_each(|point| {
+            points_to_find.push(*point);
+        });
+        for point in points_to_find {
+            document = document.add(
+                svg::node::element::Circle::new()
+                    .set("cx", Self::to_svg(point.0, hw))
+                    .set("cy", Self::to_svg_flip(point.1, hw))
+                    .set("r", 2)
+                    .set("fill", "black")
+                    .set("stroke", "black")
+                    .set("stroke-width", 3),
             );
         }
         svg::save(filename, &document).unwrap();

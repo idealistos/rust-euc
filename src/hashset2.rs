@@ -1,4 +1,4 @@
-use std::collections::hash_set::Iter;
+use std::collections::{hash_map, hash_set};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
@@ -23,7 +23,7 @@ impl<T: WithTwoHashes> Hash for Hash2Wrapper<T> {
     }
 }
 
-pub struct HashSet2Iter<'a, T: WithTwoHashes>(Iter<'a, Hash1Wrapper<T>>);
+pub struct HashSet2Iter<'a, T: WithTwoHashes>(hash_set::Iter<'a, Hash1Wrapper<T>>);
 impl<'a, T: WithTwoHashes> Iterator for HashSet2Iter<'a, T> {
     type Item = &'a T;
 
@@ -43,7 +43,7 @@ impl<'a, T: WithTwoHashes> IntoIterator for &'a HashSet2<T> {
     type IntoIter = HashSet2Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        HashSet2Iter(self.0.iter())
+        self.iter()
     }
 }
 impl<T: WithTwoHashes> HashSet2<T> {
@@ -112,6 +112,18 @@ impl<T: WithTwoHashes> HashSet2<T> {
     }
 }
 
+pub struct HashMap2Iter<'a, T: WithTwoHashes, V: Copy>(hash_map::Iter<'a, Hash1Wrapper<T>, V>);
+impl<'a, T: WithTwoHashes, V: Copy> Iterator for HashMap2Iter<'a, T, V> {
+    type Item = (&'a T, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.0.next() {
+            Some(value) => Some((&value.0 .0, value.1)),
+            None => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct HashMap2<T: WithTwoHashes, V: Copy>(
     HashMap<Hash1Wrapper<T>, V>,
@@ -151,6 +163,10 @@ impl<T: WithTwoHashes, V: Copy> HashMap2<T, V> {
 
     pub fn len(&self) -> u32 {
         self.2
+    }
+
+    pub fn iter(&self) -> HashMap2Iter<T, V> {
+        HashMap2Iter(self.0.iter())
     }
 }
 

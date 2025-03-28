@@ -38,6 +38,10 @@ impl Display for FInt {
     }
 }
 impl FInt {
+    pub const fn zero() -> Self {
+        Self(0.0, 0.0)
+    }
+
     pub fn new(value: f64) -> FInt {
         Self::new_with_bounds(value.dec(), value.inc())
     }

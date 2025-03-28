@@ -36,10 +36,20 @@ pub enum ThreePointActionType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TwoPointAndLineActionType {
+    BisectorPosCAL, // "Positive" means that line.get_direction() is used (not -line.get_direction())
+    BisectorPosACL,
+    BisectorNegCAL,
+    BisectorNegACL,
+    Last,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ActionType {
     TwoPointActionType(TwoPointActionType),
     PointAndLineActionType(PointAndLineActionType),
     ThreePointActionType(ThreePointActionType),
+    TwoPointAndLineActionType(TwoPointAndLineActionType),
 }
 impl ActionType {
     const LINE: Self = ActionType::TwoPointActionType(TwoPointActionType::Line);
@@ -54,6 +64,14 @@ impl ActionType {
     const BISECTOR_CAB: Self = ActionType::ThreePointActionType(ThreePointActionType::BisectorCAB);
     const BISECTOR_ACB: Self = ActionType::ThreePointActionType(ThreePointActionType::BisectorACB);
     const BISECTOR_ABC: Self = ActionType::ThreePointActionType(ThreePointActionType::BisectorABC);
+    const BISECTOR_POS_CAL: Self =
+        ActionType::TwoPointAndLineActionType(TwoPointAndLineActionType::BisectorPosCAL);
+    const BISECTOR_POS_ACL: Self =
+        ActionType::TwoPointAndLineActionType(TwoPointAndLineActionType::BisectorPosACL);
+    const BISECTOR_NEG_CAL: Self =
+        ActionType::TwoPointAndLineActionType(TwoPointAndLineActionType::BisectorNegCAL);
+    const BISECTOR_NEG_ACL: Self =
+        ActionType::TwoPointAndLineActionType(TwoPointAndLineActionType::BisectorNegACL);
 }
 
 pub struct ProblemDefinition {
@@ -65,6 +83,7 @@ pub struct ProblemDefinition {
     pub prioritize_low_action_count_shapes: bool,
     pub multimatch: bool,
     pub find_all_solutions: bool,
+    pub track_supports_in_rw: bool,
 }
 #[allow(dead_code)]
 impl ProblemDefinition {
@@ -77,6 +96,7 @@ impl ProblemDefinition {
         prioritize_low_action_count_shapes: true,
         multimatch: false,
         find_all_solutions: false,
+        track_supports_in_rw: false,
     };
 
     const LIMITED_ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -94,6 +114,7 @@ impl ProblemDefinition {
         prioritize_low_action_count_shapes: true,
         multimatch: false,
         find_all_solutions: false,
+        track_supports_in_rw: false,
     };
 
     const ADVANCED: ProblemDefinition = ProblemDefinition {
@@ -112,6 +133,7 @@ impl ProblemDefinition {
         prioritize_low_action_count_shapes: true,
         multimatch: false,
         find_all_solutions: false,
+        track_supports_in_rw: false,
     };
 
     const FULL_WITHOUT_BISECTOR: ProblemDefinition = ProblemDefinition {
@@ -133,6 +155,7 @@ impl ProblemDefinition {
         prioritize_low_action_count_shapes: true,
         multimatch: false,
         find_all_solutions: false,
+        track_supports_in_rw: false,
     };
 
     const FULL: ProblemDefinition = ProblemDefinition {
@@ -152,11 +175,16 @@ impl ProblemDefinition {
             ActionType::BISECTOR_CAB,
             ActionType::BISECTOR_ACB,
             ActionType::BISECTOR_ABC,
+            ActionType::BISECTOR_POS_CAL,
+            ActionType::BISECTOR_POS_ACL,
+            ActionType::BISECTOR_NEG_CAL,
+            ActionType::BISECTOR_NEG_ACL,
         ],
         random_walk_at_n_actions: None,
         prioritize_low_action_count_shapes: true,
         multimatch: false,
         find_all_solutions: false,
+        track_supports_in_rw: false,
     };
 
     pub fn has_point_and_line_actions(&self) -> bool {
@@ -169,6 +197,12 @@ impl ProblemDefinition {
         self.action_types
             .iter()
             .any(|action_type| matches!(action_type, ActionType::ThreePointActionType(_)))
+    }
+
+    pub fn has_two_point_and_line_actions(&self) -> bool {
+        self.action_types
+            .iter()
+            .any(|action_type| matches!(action_type, ActionType::TwoPointAndLineActionType(_)))
     }
 
     // Easy problem, solved
@@ -198,39 +232,12 @@ impl ProblemDefinition {
                 ActionType::CIRCLE21,
                 ActionType::MID_PERP,
             ],
-            random_walk_at_n_actions: None,
-            prioritize_low_action_count_shapes: true,
-            multimatch: false,
-            find_all_solutions: false,
+            ..Self::BASIC
         }
     }
 
     // Apparently can't be solved in 7 actions
-    fn inscribed_square_problem_1_7() -> ProblemDefinition {
-        let c = pt(0.0, 0.0);
-        let p0 = pt(0.0, -1.0);
-        let p1 = pt(1.0, 0.0);
-        let p2 = pt(0.0, 1.0);
-        let p3 = pt(-1.0, 0.0);
-
-        ProblemDefinition {
-            given_elements: vec![
-                Element::CircleCP(CircleCP { c, p: p0 }),
-                Element::Point(p0),
-                Element::Point(c),
-            ],
-            elements_to_find: vec![
-                Element::LineAB(LineAB { a: p0, b: p1 }),
-                Element::LineAB(LineAB { a: p1, b: p2 }),
-                Element::LineAB(LineAB { a: p2, b: p3 }),
-                Element::LineAB(LineAB { a: p3, b: p0 }),
-            ],
-            action_count: 7,
-            ..Self::BASIC
-        }
-    }
-
-    fn inscribed_square_problem_1_7_mm() -> ProblemDefinition {
+    fn inscribed_square_1_7() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p0 = pt(0.0, -1.0);
         let p1 = pt(1.0, 0.0);
@@ -251,37 +258,6 @@ impl ProblemDefinition {
             ],
             action_count: 7,
             multimatch: true,
-            prioritize_low_action_count_shapes: false,
-            ..Self::BASIC
-        }
-    }
-
-    fn inscribed_square_problem_1_7_mm_mod() -> ProblemDefinition {
-        let c = pt(0.0, 0.0);
-        let p0 = pt(0.0, -1.0);
-        let p1 = pt(1.0, 0.0);
-        let p2 = pt(0.0, 1.0);
-        let p3 = pt(-1.0, 0.0);
-        // let p_additional = pt(0.6213, -(1.0f64 - 0.6213f64 * 0.6213f64).sqrt());
-        let p_additional = pt(0.324234, -0.346523465);
-
-        ProblemDefinition {
-            given_elements: vec![
-                Element::CircleCP(CircleCP { c, p: p0 }),
-                Element::Point(p0),
-                Element::Point(c),
-                Element::Point(p_additional),
-            ],
-            elements_to_find: vec![
-                // Element::LineAB(LineAB { a: p0, b: p1 }),
-                Element::LineAB(LineAB { a: p1, b: p2 }),
-                // Element::LineAB(LineAB { a: p2, b: p3 }),
-                // Element::LineAB(LineAB { a: p3, b: p0 }),
-            ],
-            action_count: 4,
-            multimatch: true,
-            prioritize_low_action_count_shapes: false,
-            find_all_solutions: true,
             ..Self::BASIC
         }
     }
@@ -318,15 +294,18 @@ impl ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p0 = pt(1.0, 0.0);
         let v = pt(0.0, 1.0);
+        let p_additional = pt((1.0 - 0.23f64 * 0.23).sqrt(), 0.23);
 
         ProblemDefinition {
             given_elements: vec![
                 Element::CircleCP(CircleCP { c, p: p0 }),
                 Element::Point(p0),
                 Element::Point(c),
+                Element::Point(p_additional),
             ],
             elements_to_find: vec![Element::LineAV(LineAV { a: p0, v })],
-            action_count: 4, // Looks like it can't be solved in 3 actions
+            action_count: 3, // Looks like it can't be solved in 3 actions
+            multimatch: true,
             ..Self::BASIC
         }
     }
@@ -350,24 +329,21 @@ impl ProblemDefinition {
                 ActionType::CIRCLE21,
                 ActionType::PERP,
             ],
-            random_walk_at_n_actions: None,
-            prioritize_low_action_count_shapes: true,
-            multimatch: false,
-            find_all_solutions: false,
+            ..Self::BASIC
         }
     }
 
     fn equilateral_triangle_in_circle_problem_4_4() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
-        let p2 = pt(0.1, 0.99f64.sqrt());
+        let p_additional = pt(0.2, 0.96f64.sqrt());
         let xp1 = pt(-0.5, 0.75f64.sqrt());
         let xp2 = pt(-0.5, -(0.75f64.sqrt()));
         ProblemDefinition {
             given_elements: vec![
                 Element::CircleCP(CircleCP { c, p }),
                 Element::Point(p),
-                Element::Point(p2),
+                Element::Point(p_additional),
             ],
             elements_to_find: vec![
                 Element::LineAB(LineAB { a: xp1, b: p }),
@@ -376,7 +352,8 @@ impl ProblemDefinition {
                 Element::Point(xp1),
                 Element::Point(xp2),
             ],
-            action_count: 7, // Unclear whether it can be solved in 6 actions
+            action_count: 6, // Unclear whether it can be solved in 6 actions
+            multimatch: true,
             ..Self::BASIC
         }
     }
@@ -619,12 +596,9 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: px2, b: px3 }),
                 Element::LineAB(LineAB { a: px3, b: px4 }),
                 Element::LineAB(LineAB { a: px4, b: px1 }),
-                Element::Point(px1),
-                Element::Point(px2),
-                Element::Point(px3),
-                Element::Point(px4),
             ],
             action_count: 11,
+            multimatch: true,
             ..Self::BASIC
         }
     }
@@ -668,9 +642,9 @@ impl ProblemDefinition {
         let p2 = pt(0.31482564, -3.5234576);
         let v = pt(1.0, 0.0);
         let px1 = pt(1.0, 1.0);
-        let px2 = pt(1.0, -1.0);
-        let px3 = pt(-1.0, -1.0);
-        let px4 = pt(-1.0, 1.0);
+        let _px2 = pt(1.0, -1.0);
+        let _px3 = pt(-1.0, -1.0);
+        let _px4 = pt(-1.0, 1.0);
 
         ProblemDefinition {
             given_elements: vec![
@@ -897,7 +871,7 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: xp3, b: xp4 }),
                 Element::LineAB(LineAB { a: xp4, b: xp1 }),
             ],
-            action_count: 7, // Actually 10
+            action_count: 10,
             ..Self::BASIC
         }
     }
@@ -936,6 +910,8 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: xp4, b: xp1 }),
             ],
             action_count: 7,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
             ..Self::FULL_WITHOUT_BISECTOR
         }
     }
@@ -943,8 +919,8 @@ impl ProblemDefinition {
     fn parallelogram_by_three_midpoints_6_11_full_partial() -> ProblemDefinition {
         let xp1 = pt(0.0, 0.0);
         let xp2 = pt(0.6, 0.8);
-        let xp3 = pt(1.62, 0.8);
-        let xp4 = pt(1.02, 0.0);
+        let _xp3 = pt(1.62, 0.8);
+        let _xp4 = pt(1.02, 0.0);
         let m23 = pt(1.11, 0.8);
         let m34 = pt(1.32, 0.4);
         let m41 = pt(0.51, 0.0);
@@ -1010,6 +986,7 @@ impl ProblemDefinition {
             ],
             elements_to_find: vec![Element::LineAB(LineAB { a: c, b: px })],
             action_count: 3,
+            multimatch: true,
             prioritize_low_action_count_shapes: false,
             ..Self::FULL
         }
@@ -1050,6 +1027,35 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: x, b: p2 }),
             ],
             action_count: 4,
+            ..Self::BASIC
+        }
+    }
+
+    fn inscribed_circle_7_7_with_prep() -> ProblemDefinition {
+        // Heronian triangle (21, 20, 13), area = 126, h = 12.6
+        // r = 2S / (a1 + a2 + a3) = 14/3
+        // x-distance from b: (AB + BC - AC) / 2 = (20 + 21 - 13) / 2 = 14
+        let a = pt(0.0, 1.26);
+        let b = pt(-1.68, 0.0);
+        let c = pt(0.32, 0.0);
+
+        let cx = pt(1.4 - 1.68, 1.4 / 3.0);
+        let c_side = pt(0.32 - 1.3, 0.0);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+                Element::CircleCP(CircleCP { c, p: a }),
+                Element::CircleCP(CircleCP { c: c_side, p: a }),
+                Element::CircleCP(CircleCP { c: a, p: c_side }),
+            ],
+            elements_to_find: vec![Element::CircleCR(CircleCR {
+                c: cx,
+                r: FInt::new(1.4 / 3.0),
+            })],
+            action_count: 2,
             ..Self::BASIC
         }
     }
@@ -1112,7 +1118,7 @@ impl ProblemDefinition {
         let v2 = pt(cos, sin);
         let px1 = pt(-sin, cos);
         let px2 = pt(sin, -cos);
-        let p_additional = pt(-0.12345, -1.0);
+        let _p_additional = pt(-0.12345, -1.0);
         ProblemDefinition {
             given_elements: vec![
                 Element::LineAV(LineAV { a: p, v }),
@@ -1260,6 +1266,73 @@ impl ProblemDefinition {
         }
     }
 
+    fn regular_octagon_8_4() -> ProblemDefinition {
+        let kh = 0.5f64.sqrt();
+        let p1 = pt(0.0, 0.0);
+        let p2 = pt(1.0, 0.0);
+        let px3 = pt(1.0 + kh, kh);
+        let px4 = pt(1.0 + kh, 1.0 + kh);
+        let px5 = pt(1.0, 1.0 + 2.0 * kh);
+        let px6 = pt(0.0, 1.0 + 2.0 * kh);
+        let px7 = pt(-kh, 1.0 + kh);
+        let px8 = pt(-kh, kh);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a: p1, b: p2 }),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: p2, b: px3 }),
+                Element::LineAB(LineAB { a: px3, b: px4 }),
+                Element::LineAB(LineAB { a: px4, b: px5 }),
+                Element::LineAB(LineAB { a: px5, b: px6 }),
+                Element::LineAB(LineAB { a: px6, b: px7 }),
+                Element::LineAB(LineAB { a: px7, b: px8 }),
+                Element::LineAB(LineAB { a: px8, b: p1 }),
+            ],
+            action_count: 13,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
+    fn regular_octagon_8_4_adv() -> ProblemDefinition {
+        let kh = 0.5f64.sqrt();
+        let p1 = pt(0.0, 0.0);
+        let p2 = pt(1.0, 0.0);
+        let px3 = pt(1.0 + kh, kh);
+        let px4 = pt(1.0 + kh, 1.0 + kh);
+        let px5 = pt(1.0, 1.0 + 2.0 * kh);
+        let px6 = pt(0.0, 1.0 + 2.0 * kh);
+        let px7 = pt(-kh, 1.0 + kh);
+        let px8 = pt(-kh, kh);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a: p1, b: p2 }),
+                Element::Point(p1),
+                Element::Point(p2),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: p2, b: px3 }),
+                Element::LineAB(LineAB { a: px3, b: px4 }),
+                Element::LineAB(LineAB { a: px4, b: px5 }),
+                Element::LineAB(LineAB { a: px5, b: px6 }),
+                Element::LineAB(LineAB { a: px6, b: px7 }),
+                Element::LineAB(LineAB { a: px7, b: px8 }),
+                Element::LineAB(LineAB { a: px8, b: p1 }),
+                // Element::Point(Point(FInt::new(0.12390123), FInt::new(0.12930193))),
+            ],
+            action_count: 9,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            ..Self::FULL
+        }
+    }
+
     fn triangle_cleaver_8_5_rw() -> ProblemDefinition {
         let h = 1.65239;
         let x1 = -0.86762;
@@ -1269,7 +1342,7 @@ impl ProblemDefinition {
         let c = pt(x2, 0.0);
         let l1 = (x1 * x1 + h * h).sqrt();
         let l2 = (x2 * x2 + h * h).sqrt();
-        let k = 0.5 * (l1 - l2) / l2;
+        let k = 0.5 * (l1 - l2) / l1;
         let px1 = pt(k * x1, h - k * h);
         let px2 = pt(0.5 * (x1 + x2), 0.0);
 
@@ -1290,25 +1363,29 @@ impl ProblemDefinition {
     }
 
     fn triangle_cleaver_8_5_adv() -> ProblemDefinition {
-        // Heronian triangle (21, 20, 13), area = 126, h = 12.6
-        let a = pt(0.0, 1.26);
-        let b = pt(-1.68, 0.0);
-        let c = pt(0.32, 0.0);
-        let px = pt(-0.68, 0.0);
-        let py = pt(-1.68 * 4.0 / 21.0, 1.26 * 17.0 / 21.0);
+        let h = 1.65239;
+        let x1 = -0.86762;
+        let x2 = 0.52374;
+        let a = pt(0.0, h);
+        let b = pt(x1, 0.0);
+        let c = pt(x2, 0.0);
+        let l1 = (x1 * x1 + h * h).sqrt();
+        let l2 = (x2 * x2 + h * h).sqrt();
+        let k = 0.5 * (l1 - l2) / l1;
+        let px1 = pt(k * x1, h - k * h);
+        let px2 = pt(0.5 * (x1 + x2), 0.0);
 
         ProblemDefinition {
             given_elements: vec![
-                Element::LineAB(LineAB { a, b }),
-                Element::LineAB(LineAB { a, b: c }),
-                Element::LineAB(LineAB { a: c, b }),
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
             ],
-            elements_to_find: vec![Element::LineAB(LineAB { a: px, b: py })],
-            action_count: 4,
+            elements_to_find: vec![Element::LineAB(LineAB { a: px1, b: px2 })],
+            action_count: 3,
             multimatch: true,
             prioritize_low_action_count_shapes: false,
-            find_all_solutions: true,
-            ..Self::FULL_WITHOUT_BISECTOR
+            ..Self::FULL
         }
     }
 
@@ -1357,6 +1434,103 @@ impl ProblemDefinition {
         }
     }
 
+    fn minimum_perimeter_2_9_7() -> ProblemDefinition {
+        // Heronian triangle (21, 20, 13), area = 126, h = 12.6
+        // a-c: (0.32, 0.0) t + (0.0, 1.26) (1 - t)
+        // b-b': (-1.68, 0.0) + t [(-0.32, 1.26)] = (-1.68, 0.0) + t' (1.26, 0.32);
+        // Solution: t = 105/169, t' = 252/169, b': (168/845, 2016/4225)
+        // a-b: (-1.68, 0.0) t + (0.0, 1.26) (1 - t)
+        // c-c': (0.32, 0.0) + t [(1.68, 1.26)] = (0.32, 0.0) + t'(1.26, -1.68)  -> t = 5/21, t' = -4/7, (-0.4, 0.96)
+        // Generalized: (l, 0) t + (0, h) (1 - t) == (-r, 0) + t' (h, l))
+        let r = 1.6573;
+        let l = 0.3156;
+        let h = 1.2572;
+        let a = pt(0.0, h);
+        let b = pt(-r, 0.0);
+        let c = pt(l, 0.0);
+        let xa = pt(0.0, 0.0);
+        let xb = pt(
+            l * (h * h - l * r) / (h * h + l * l),
+            l * h * (l + r) / (h * h + l * l),
+        );
+        let xc = pt(
+            -r * (h * h - l * r) / (h * h + r * r),
+            r * h * (l + r) / (h * h + r * r),
+        );
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+            ],
+            elements_to_find: vec![
+                // Element::LineAB(LineAB { a: xa, b: xb }),
+                Element::LineAB(LineAB { a: xb, b: xc }),
+                Element::LineAB(LineAB { a: xa, b: xc }),
+            ],
+            action_count: 7,
+            multimatch: true,
+            // prioritize_low_action_count_shapes: false,
+            random_walk_at_n_actions: Some(4),
+            track_supports_in_rw: true,
+            ..Self::BASIC
+        }
+    }
+
+    fn harmonic_mean_of_segments_9_8() -> ProblemDefinition {
+        let r = 2.36726;
+        let p1 = pt(-1.0, 0.0);
+        let p2 = pt(r, 0.0);
+        let p = pt(0.0, 0.0);
+        let v = pt(0.72387, 0.932483);
+        let l = FInt::new(2.0 * 1.0 * r / (1.0 + r));
+        let d = v.distance_to(&p);
+        let px = Point(l * v.0 / d, l * v.1 / d);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a: p1, b: p2 }),
+                Element::Point(p),
+                Element::Point(p1),
+                Element::Point(p2),
+                Element::RayAV(RayAV { a: p, v }),
+                Element::Point(v),
+            ],
+            elements_to_find: vec![Element::Point(px)],
+            action_count: 4,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
+    fn triangle_midsegment_9_10() -> ProblemDefinition {
+        let h = 1.65239;
+        let x1 = -0.86762;
+        let x2 = 0.52374;
+        let a = pt(0.0, h);
+        let b = pt(x1, 0.0);
+        let c = pt(x2, 0.0);
+        let px1 = pt(0.5 * x1, 0.5 * h);
+        let px2 = pt(0.5 * x2, 0.5 * h);
+
+        ProblemDefinition {
+            given_elements: vec![
+                Element::SegmentAB(SegmentAB { a, b }),
+                Element::SegmentAB(SegmentAB { a, b: c }),
+                Element::SegmentAB(SegmentAB { a: c, b }),
+            ],
+            elements_to_find: vec![Element::LineAB(LineAB { a: px1, b: px2 })],
+            action_count: 5,
+            multimatch: true,
+            // prioritize_low_action_count_shapes: false,
+            random_walk_at_n_actions: Some(3),
+            track_supports_in_rw: true,
+            ..Self::BASIC
+        }
+    }
+
     fn chord_trisection_10_8() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
@@ -1378,8 +1552,30 @@ impl ProblemDefinition {
         }
     }
 
+    /*
+
+    Unsolved problems:
+
+    Basic:
+
+    Equilateral triangle in circle (4.4), 6 actions - "all actions explored", solvable in 7 actions (with an additional point)
+    Circumscribed Square (5.8), 11 actions - too large
+    Inscribed circle (7.7), 8 actions - too large
+    Circle tangent to 3 lines (7.8), 6 actions - tried random walk
+    Excircle (7.11), 8 actions
+    Regular Octagon (8.4), 13 actions
+    Triangle cleaver (8.5), 7 actions
+
+    Advanced:
+
+    Parallelogram by 3 midpoints (6.11), 7 actions - solvable in 8 actions
+    Angle of 75 (7.3), 3 actions - "all actions explored", solvable in 4 actions
+
+
+    */
+
     pub fn get_problem() -> ProblemDefinition {
-        Self::triangle_cleaver_8_5_rw()
+        Self::minimum_perimeter_2_9_7()
         // Self::circle_tangent_to_three_lines_7_8_rw_alt()
         // Self::parallelogram_by_three_midpoints_6_11_full_partial()
         // Self::midpoint_problem_1_3()
@@ -1392,20 +1588,20 @@ impl ProblemDefinition {
         // Self::circumscribed_square_5_8()
         // Self::circle_tangent_to_square_side_5_10()
         // Self::circle_tangent_to_three_lines_7_8()
-
-        // Unclear:
-        // Self::square_in_square_5_9()
+        // Self::regular_octagon_8_4()
+        // Self::triangle_midsegment_9_10()
 
         // Finds a solution with too many actions
         // Self::parallelogram_by_three_midpoints_6_11()
         // Self::angle_of_75_7_3_full()
 
         // Solved with one more action (required solution probably doesn't exist)
-        // Self::tangent_to_circle_at_point_2_8()
         // Self::equilateral_triangle_in_circle_problem_4_4()
 
         // Solved problems
         // Self::midpoint_problem_1_3()
+        // Self::inscribed_square_1_7()
+        // Self::tangent_to_circle_at_point_2_8()
         // Self::angle_of_60_4_2()
         // Self::circumscribed_equilateral_triangle_4_3()
         // Self::line_equidistant_from_two_points_5_3()
@@ -1426,7 +1622,10 @@ impl ProblemDefinition {
         // Self::angle_isosceles_7_10()
         // Self::angle_54_trisection_8_2_mm()
         // Self::interior_angles_8_3()
+        // Self::regular_octagon_8_4_adv()
+        // Self::triangle_cleaver_8_5_adv()
         // Self::torricelli_point_8_6_adv() (required setting priority for found_point to 500)
+        // Self::harmonic_mean_of_segments_9_8()
 
         // Solved with random walk
         // Self::circle_tangent_to_square_side_5_10_rw_mod()

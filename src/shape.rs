@@ -7,7 +7,7 @@ use std::{
 
 use crate::{element::LineAB, fint::FInt, hashset2::WithTwoHashes};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Point(pub FInt, pub FInt);
 impl PartialEq for Point {
     fn eq(&self, x: &Point) -> bool {
@@ -29,6 +29,11 @@ impl WithTwoHashes for Point {
 impl Display for Point {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Pt(x={},y={})", self.0, self.1)
+    }
+}
+impl fmt::Debug for Point {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self, f)
     }
 }
 impl Point {
@@ -55,12 +60,15 @@ impl Point {
     pub fn distance_to(&self, point: &Point) -> FInt {
         ((self.0 - point.0).sqr() + (self.1 - point.1).sqr()).sqrt()
     }
+
+    pub fn is_collinear(&self, point: &Point) -> bool {
+        self.0 * point.1 - self.1 * point.0 == FInt::new(0.0)
+    }
 }
 
 pub trait ShapeTrait: Display {
     fn find_intersection_points(&self, s: &Shape) -> [Option<Point>; 2];
     fn contains_point(&self, point: &Point) -> bool;
-    fn get_direction(&self) -> Option<Point>;
     fn well_formed(&self) -> bool;
 }
 
@@ -101,10 +109,6 @@ impl ShapeTrait for Line {
 
     fn contains_point(&self, point: &Point) -> bool {
         return self.nx * point.0 + self.ny * point.1 == self.d;
-    }
-
-    fn get_direction(&self) -> Option<Point> {
-        Some(Point(self.ny.negate(), self.nx))
     }
 
     fn well_formed(&self) -> bool {
@@ -180,6 +184,10 @@ impl Line {
             )),
         ]
     }
+
+    fn get_direction(&self) -> Option<Point> {
+        Some(Point(self.ny.negate(), self.nx))
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -216,10 +224,6 @@ impl ShapeTrait for Circle {
 
     fn contains_point(&self, point: &Point) -> bool {
         return (point.0 - self.c.0).sqr() + (point.1 - self.c.1).sqr() == self.r2;
-    }
-
-    fn get_direction(&self) -> Option<Point> {
-        None
     }
 
     fn well_formed(&self) -> bool {
@@ -328,10 +332,6 @@ impl ShapeTrait for Ray {
                 .always_positive()
     }
 
-    fn get_direction(&self) -> Option<Point> {
-        Some(self.v)
-    }
-
     fn well_formed(&self) -> bool {
         self.a.well_formed() && self.v.well_formed()
     }
@@ -425,6 +425,18 @@ impl Ray {
             [point1, point2]
         }
     }
+
+    fn get_direction(&self) -> Option<Point> {
+        Some(self.v)
+    }
+
+    // True if the directions match or the endpoint is in the ray ( = point + t * v for some positive t)
+    fn intersects_with_collinear_ray(&self, point: &Point, v: &Point) -> bool {
+        let proj = point.0 * v.0 + point.1 * v.1;
+        let proj1 = self.a.0 * v.0 + self.a.1 * v.1;
+        return (proj1 - proj).always_positive()
+            || (v.0 * self.v.0 + v.1 * self.v.1).always_positive();
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -465,10 +477,6 @@ impl ShapeTrait for Segment {
             && !((self.a.0 - point.0) * (self.b.0 - point.0)
                 + (self.a.1 - point.1) * (self.b.1 - point.1))
                 .always_positive()
-    }
-
-    fn get_direction(&self) -> Option<Point> {
-        self.as_line().get_direction()
     }
 
     fn well_formed(&self) -> bool {
@@ -554,6 +562,18 @@ impl Segment {
             [point1, point2]
         }
     }
+
+    fn get_direction(&self) -> Option<Point> {
+        self.as_line().get_direction()
+    }
+
+    // True if at least one endpoint is in the ray ( = point + t * v for some positive t)
+    fn intersects_with_collinear_ray(&self, point: &Point, v: &Point) -> bool {
+        let proj = point.0 * v.0 + point.1 * v.1;
+        let proj1 = self.a.0 * v.0 + self.a.1 * v.1;
+        let proj2 = self.b.0 * v.0 + self.b.1 * v.1;
+        return (proj1 - proj).always_positive() || (proj2 - proj).always_positive();
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -611,15 +631,6 @@ impl ShapeTrait for Shape {
         }
     }
 
-    fn get_direction(&self) -> Option<Point> {
-        match self {
-            Shape::Line(line) => line.get_direction(),
-            Shape::Ray(ray) => ray.get_direction(),
-            Shape::Segment(segment) => segment.get_direction(),
-            Shape::Circle(_circle) => None,
-        }
-    }
-
     fn well_formed(&self) -> bool {
         match self {
             Shape::Line(line) => line.well_formed(),
@@ -640,6 +651,25 @@ impl FromStr for Shape {
             "Ray" => Ray::from_str(s).map(|ray| Shape::Ray(ray)),
             "Segment" => Segment::from_str(s).map(|segment| Shape::Segment(segment)),
             _ => Err("Wrong head: {}".to_string() + head),
+        }
+    }
+}
+impl Shape {
+    pub fn get_direction(&self) -> Option<Point> {
+        match self {
+            Shape::Line(line) => line.get_direction(),
+            Shape::Ray(ray) => ray.get_direction(),
+            Shape::Segment(segment) => segment.get_direction(),
+            Shape::Circle(_circle) => None,
+        }
+    }
+
+    pub fn intersects_with_collinear_ray(&self, point: &Point, v: &Point) -> bool {
+        match self {
+            Shape::Line(_line) => true,
+            Shape::Ray(ray) => ray.intersects_with_collinear_ray(point, v),
+            Shape::Segment(segment) => segment.intersects_with_collinear_ray(point, v),
+            Shape::Circle(_circle) => false,
         }
     }
 }

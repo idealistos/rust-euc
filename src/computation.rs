@@ -34,7 +34,7 @@ mod print;
 mod random_walk;
 
 const GIVEN: i32 = -1;
-const RANDOM_WALK_LIMIT: u32 = 1000000000;
+const RANDOM_WALK_LIMIT: u32 = 50000000;
 
 #[derive(Debug)]
 struct PointOrigin {
@@ -122,7 +122,7 @@ impl<'a> Computation<'a> {
         lower_mask.count_ones() + deps_vec_1.len_u32() + deps_vec_2.len_u32() - same_count
     }
 
-    fn get_deps_combined_with_index_count(&self, deps: u64, index: i32) -> u32 {
+    fn _get_deps_combined_with_index_count(&self, deps: u64, index: i32) -> u32 {
         if index < 40 {
             self.get_deps_count(deps | (1 << index))
         } else if deps < (1u64 << 40) {
@@ -294,6 +294,24 @@ impl<'a> Computation<'a> {
         deps_list
     }
 
+    fn check_action_and_add_to_results(
+        &self,
+        maybe_action: Option<Action>,
+        results: &mut [Option<Action>],
+    ) {
+        match maybe_action {
+            Some(mut action) => {
+                let priority = action.compute_priority(self);
+                if priority > 0 {
+                    action.priority = priority;
+                    let index = action.get_action_index();
+                    results[index] = Some(action);
+                }
+            }
+            None => (),
+        }
+    }
+
     // Order bits of all_deps and use indices corresponding to deps as bits for the result
     fn compress(&self, deps: u64, all_deps: u64) -> u64 {
         let deps_combination = &self.deps_combinations[(deps >> 40) as usize];
@@ -383,11 +401,11 @@ impl<'a> Computation<'a> {
                 index = self.shape_origins[index as usize].next;
             }
         }
-        println!(
-            "All deps: {:b} (count: {})",
-            all_relevant_deps,
-            self.get_deps_count(all_relevant_deps)
-        );
+        // println!(
+        //     "All deps: {:b} (count: {})",
+        //     all_relevant_deps,
+        //     self.get_deps_count(all_relevant_deps)
+        // );
         let mut deps_lists = Vec::new();
         for point in &points_copy {
             let mut index = self.points.get(*point).unwrap();
@@ -409,12 +427,12 @@ impl<'a> Computation<'a> {
             }
             deps_lists.push(deps_list);
         }
-        for deps_list in &deps_lists {
-            println!("--");
-            for deps in deps_list {
-                println!("{:b}", deps);
-            }
-        }
+        // for deps_list in &deps_lists {
+        //     println!("--");
+        //     for deps in deps_list {
+        //         println!("{:b}", deps);
+        //     }
+        // }
         let shortest_union = Self::find_shortest_deps_union(&deps_lists, 0, 0);
         println!(
             "Deps in the shortest union: {}",
@@ -510,9 +528,8 @@ impl<'a> Computation<'a> {
         if self.problem.has_point_and_line_actions() {
             for i in 0..self.shape_origins.len_i32() {
                 let shape1 = self.shape_origins[i as usize].get_shape();
-                match shape1 {
-                    Shape::Line(_) => (),
-                    _ => continue,
+                if shape1.get_direction().is_none() {
+                    continue;
                 }
                 let maybe_actions = Action::check_action_point_and_line(self, index, i);
                 for maybe_action in maybe_actions {
@@ -536,6 +553,24 @@ impl<'a> Computation<'a> {
                 }
             }
         }
+        if self.problem.has_two_point_and_line_actions() {
+            for i1 in 0..index {
+                for i2 in 0..self.shape_origins.len_i32() {
+                    let shape1 = self.shape_origins[i2 as usize].get_shape();
+                    if shape1.get_direction().is_none() {
+                        continue;
+                    }
+                    let maybe_actions =
+                        Action::check_action_two_point_and_line(self, i1, index, i2);
+                    for maybe_action in maybe_actions {
+                        match maybe_action {
+                            Some(action) => self.queue.push(action),
+                            None => (),
+                        }
+                    }
+                }
+            }
+        }
 
         if self.queue.len() > 100000000 {
             println!("Reducing queue size");
@@ -548,12 +583,19 @@ impl<'a> Computation<'a> {
     }
 
     fn update_shape_seen_before(&mut self, shape: Shape, index: i32, deps: u64) -> bool {
-        let mut i = self.shapes.get(shape).unwrap();
+        let i0 = self.shapes.get(shape).unwrap();
+        let mut i = i0;
+        // println!("Shape seen before, i0: {}, index: {}", i0, index);
         while i >= 0 {
             let shape_origin = &self.shape_origins[i as usize];
-            if self.get_combined_deps_count(shape_origin.deps, deps)
-                == self.get_deps_combined_with_index_count(deps, i)
-            {
+            // println!(
+            //     "Comparing deps: {:b} (i = {}), new: {:b}, equal: {}",
+            //     shape_origin.deps,
+            //     i,
+            //     deps,
+            //     deps == shape_origin.deps
+            // );
+            if self.get_combined_deps_count(shape_origin.deps, deps) == self.get_deps_count(deps) {
                 return false;
             }
             let shape_origin = &mut self.shape_origins[i as usize];
@@ -566,6 +608,7 @@ impl<'a> Computation<'a> {
                 shape_origin.next = index;
             }
         }
+        // println!("Adding {}", index);
         true
     }
 
@@ -578,7 +621,6 @@ impl<'a> Computation<'a> {
         }
         if !seen_before && self.shapes_to_find.contains(shape) {
             self.found_shapes.insert(shape);
-            println!("{}", self.shapes_to_find.len());
             self.shapes_to_find.slow_remove(shape);
             if self.points_to_find.len() == 0 && self.shapes_to_find.len() == 0 {
                 println!("Solution possibly found!");
@@ -598,13 +640,14 @@ impl<'a> Computation<'a> {
         if !seen_before {
             self.shapes.insert_if_new(shape, index);
         }
+        let saved_as_index = self.shape_origins.len_i32();
         self.shape_origins.push(ShapeOrigin {
             element_link,
             deps: combined_deps_with_index,
             found_shape_mask,
             next: -1,
         });
-        if self.problem.multimatch && self.found_shapes.contains(shape) {
+        if self.found_shapes.contains(shape) {
             self.check_multimatch_solution_found();
         }
         for i in 0..index {
@@ -619,22 +662,28 @@ impl<'a> Computation<'a> {
                     .find_intersection_points(&shape);
                 for maybe_point in maybe_points {
                     match maybe_point {
-                        Some(point) => self.register_point(point, [i, index]),
+                        Some(point) => self.register_point(point, [i, saved_as_index]),
                         None => (),
                     }
                 }
             }
         }
-        if matches!(shape, Shape::Line { .. }) && self.problem.has_point_and_line_actions() {
+        if shape.get_direction().is_some() && self.problem.has_point_and_line_actions() {
             for i in 0..self.point_origins.len_i32() {
-                let point_origin = &self.point_origins[i as usize];
-                let deps_count =
-                    self.get_combined_deps_count(combined_deps_with_index, point_origin.deps);
-                let combined_mask = point_origin.found_shape_mask | found_shape_mask;
-                let reserved =
-                    self.shape_to_find_mask_by_shape.len_u32() - combined_mask.count_ones();
-                if deps_count + reserved <= self.problem.action_count {
-                    let maybe_actions = Action::check_action_point_and_line(self, i, index);
+                let maybe_actions = Action::check_action_point_and_line(self, i, index);
+                for maybe_action in maybe_actions {
+                    match maybe_action {
+                        Some(action) => self.queue.push(action),
+                        None => (),
+                    }
+                }
+            }
+        }
+        if shape.get_direction().is_some() && self.problem.has_two_point_and_line_actions() {
+            for i1 in 0..self.point_origins.len_i32() {
+                for i2 in (i1 + 1)..self.point_origins.len_i32() {
+                    let maybe_actions =
+                        Action::check_action_two_point_and_line(self, i1, i2, index);
                     for maybe_action in maybe_actions {
                         match maybe_action {
                             Some(action) => self.queue.push(action),
@@ -732,10 +781,11 @@ impl<'a> Computation<'a> {
                     );
                 }
                 println!(
-                    "Loop {}; points: {}, shapes: {}, found: {}+{}, queue: {}, deps: {}, p: {}, time: {}",
+                    "Loop {}; points: {}, shapes: {} ({}), found: {}+{}, queue: {}, deps: {}, p: {}, time: {}",
                     i,
                     self.point_origins.len(),
                     self.shape_origins.len(),
+                    self.shapes.len(),
                     self.found_points.len(),
                     self.found_shapes.len(),
                     self.queue.len(),
