@@ -336,7 +336,8 @@ impl ProblemDefinition {
     fn equilateral_triangle_in_circle_problem_4_4() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(1.0, 0.0);
-        let p_additional = pt(0.2, 0.96f64.sqrt());
+        let cos = 0.823423;
+        let p_additional = pt(cos, (1.0 - cos * cos).sqrt());
         let xp1 = pt(-0.5, 0.75f64.sqrt());
         let xp2 = pt(-0.5, -(0.75f64.sqrt()));
         ProblemDefinition {
@@ -349,11 +350,11 @@ impl ProblemDefinition {
                 Element::LineAB(LineAB { a: xp1, b: p }),
                 Element::LineAB(LineAB { a: xp2, b: p }),
                 Element::LineAB(LineAB { a: xp1, b: xp2 }),
-                Element::Point(xp1),
-                Element::Point(xp2),
             ],
             action_count: 6, // Unclear whether it can be solved in 6 actions
             multimatch: true,
+            random_walk_at_n_actions: Some(4),
+            track_supports_in_rw: true,
             ..Self::BASIC
         }
     }
@@ -605,20 +606,22 @@ impl ProblemDefinition {
 
     fn circumscribed_square_5_8_rw() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
-        let p = pt(0.0, 1.0);
-        let p2 = pt(0.36482, -2.12345);
+        let r = FInt::new(1.0);
+        let p2 = pt(0.31482, -2.12345);
         let v = pt(1.0, 0.0);
         let px1 = pt(1.0, 1.0);
         let px2 = pt(1.0, -1.0);
         let px3 = pt(-1.0, -1.0);
         let px4 = pt(-1.0, 1.0);
+        let cos = 0.23463;
+        let p_additional = pt(cos, -(1.0 - cos * cos).sqrt());
 
         ProblemDefinition {
             given_elements: vec![
-                Element::CircleCP(CircleCP { c, p }),
+                Element::CircleCR(CircleCR { c, r }),
                 Element::LineAV(LineAV { a: p2, v }),
                 Element::Point(c),
-                Element::Point(p2),
+                Element::Point(p_additional),
             ],
             elements_to_find: vec![
                 Element::LineAB(LineAB { a: px1, b: px2 }),
@@ -631,20 +634,24 @@ impl ProblemDefinition {
                 Element::Point(px4),
             ],
             action_count: 11,
+            multimatch: true,
             random_walk_at_n_actions: Some(4),
+            track_supports_in_rw: true,
             ..Self::BASIC
         }
     }
 
-    fn circumscribed_square_5_8_mm_mod() -> ProblemDefinition {
+    fn circumscribed_square_5_8_mod() -> ProblemDefinition {
         let c = pt(0.0, 0.0);
         let p = pt(0.0, 1.0);
-        let p2 = pt(0.31482564, -3.5234576);
+        let p2 = pt(-2.148254, -3.523456);
         let v = pt(1.0, 0.0);
         let px1 = pt(1.0, 1.0);
-        let _px2 = pt(1.0, -1.0);
-        let _px3 = pt(-1.0, -1.0);
-        let _px4 = pt(-1.0, 1.0);
+        let px2 = pt(1.0, -1.0);
+        let px3 = pt(-1.0, -1.0);
+        let px4 = pt(-1.0, 1.0);
+        let d = p2.distance_to(&c);
+        let p3 = Point(p2.0 + d, p2.1);
 
         ProblemDefinition {
             given_elements: vec![
@@ -652,21 +659,20 @@ impl ProblemDefinition {
                 Element::LineAV(LineAV { a: p2, v }),
                 Element::Point(c),
                 Element::Point(p2),
+                Element::CircleCP(CircleCP { c: p2, p: c }),
+                Element::CircleCP(CircleCP { c: p3, p: c }),
             ],
             elements_to_find: vec![
-                // Element::LineAB(LineAB { a: px1, b: px2 }),
-                // Element::LineAB(LineAB { a: px2, b: px3 }),
-                // Element::LineAB(LineAB { a: px3, b: px4 }),
-                // Element::LineAB(LineAB { a: px4, b: px1 }),
-                Element::Point(px1),
-                // Element::Point(px2),
-                // Element::Point(px3),
-                // Element::Point(px4),
+                Element::LineAB(LineAB { a: px1, b: px2 }),
+                Element::LineAB(LineAB { a: px2, b: px3 }),
+                Element::LineAB(LineAB { a: px3, b: px4 }),
+                Element::LineAB(LineAB { a: px4, b: px1 }),
             ],
-            action_count: 7,
-            // multimatch: true,
+            action_count: 9,
+            multimatch: true,
             // find_all_solutions: true,
-            random_walk_at_n_actions: Some(4),
+            random_walk_at_n_actions: Some(3),
+            track_supports_in_rw: true,
             // prioritize_low_action_count_shapes: false,
             ..Self::BASIC
         }
@@ -889,6 +895,18 @@ impl ProblemDefinition {
     // 28: Line28 Line(nx=0.000,ny=1.000,d=0.000) [3 actions: 10000000000000000000000000101 (1000)][pri = 90] from GivenPoint2 and x/Line0/Circle2 (TwoPointActionType(Line))
     // 1831: Line1831 Line(nx=0.800,ny=-0.600,d=-0.000) [4 actions: 111000000000000000000000000000000000010000000000011 (1)][pri = 38] from x/Line0/Circle1 and x/Circle1/Circle13 (TwoPointActionType(Line))
     // Finished in 4699 seconds
+    // Solution in 9 actions (found as 7 actions for some reason):
+    // 107: Line107 Line(nx=0.800,ny=-0.600,d=0.408) [1 actions: 10111110000000000000000000000000000000000000000 (0)][pri = 14] from GivenPoint0 and GivenPoint2 (TwoPointActionType(Line))
+    // 110: Line110 Line(nx=0.600,ny=0.800,d=0.806) [1 actions: 11110010000000000000000000000000000000000000000 (0)][pri = 14] from GivenPoint0 and GivenPoint2 (TwoPointActionType(MidPerp))
+    // 113: Circle113 Circle(c.x=0.510,c.y=0.000,r2=0.816) [1 actions: 100111000000000000000000000000000000000000000000 (0)][pri = 14] from GivenPoint1 and GivenPoint2 (TwoPointActionType(Circle21))
+    // 133: Line133 Line(nx=0.800,ny=-0.600,d=0.816) [2 actions: 1100011010000000000000000000000000000000000000000 (100)][pri = 12] from GivenPoint1 and Line107 (PointAndLineActionType(Par))
+    // 134: Line134 Line(nx=0.800,ny=-0.600,d=0.816) [2 actions: 1100101000000000000000000000000000000000000000000 (100)][pri = 12] from GivenPoint1 and Line110 (PointAndLineActionType(Perp))
+    // 3888: Line3888 Line(nx=1.000,ny=0.000,d=1.065) [3 actions: 11011011110100000000000000000000000000000000000000000 (0)][pri = 10] from GivenPoint1 and x/Line107/Line110 (TwoPointActionType(MidPerp))
+    // 4101: Circle4101 Circle(c.x=-0.032,c.y=-0.723,r2=3.088) [3 actions: 11100100100110000000000000000000000000000000000000000 (0)][pri = 10] from GivenPoint1 and x/Line107/Circle113 (TwoPointActionType(Circle21))
+    // 5388: Line5388 Line(nx=0.000,ny=1.000,d=0.800) [4 actions: 100010100100100000000000000000000000000000000000000000 (10)][pri = 8] from GivenPoint0 and Line3888 (PointAndLineActionType(Perp))
+    // 5547: Line5547 Line(nx=0.000,ny=1.000,d=0.000) [4 actions: 100110011111010000000000000000000000000000000000000000 (1000)][pri = 8] from GivenPoint2 and Line3888 (PointAndLineActionType(Perp))
+    // 5609: Line5609 Line(nx=0.800,ny=-0.600,d=0.000) [4 actions: 100111011100110000000000000000000000000000000000000000 (1)][pri = 8] from x/Circle113/Circle4101 and Line107 (PointAndLineActionType(Par))
+    // Solution found in 55301 seconds
     fn parallelogram_by_three_midpoints_6_11_adv() -> ProblemDefinition {
         let xp1 = pt(0.0, 0.0);
         let xp2 = pt(0.6, 0.8);
@@ -912,6 +930,84 @@ impl ProblemDefinition {
             action_count: 7,
             multimatch: true,
             prioritize_low_action_count_shapes: false,
+            ..Self::FULL_WITHOUT_BISECTOR
+        }
+    }
+
+    fn parallelogram_by_three_midpoints_6_11_adv_mod() -> ProblemDefinition {
+        let xp1 = pt(0.0, 0.0);
+        let xp2 = pt(0.6, 0.8);
+        let xp3 = pt(1.62, 0.8);
+        let xp4 = pt(1.02, 0.0);
+        let m23 = pt(1.11, 0.8);
+        let m34 = pt(1.32, 0.4);
+        let m41 = pt(0.51, 0.0);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(m23),
+                Element::Point(m34),
+                Element::Point(m41),
+                Element::LineAB(LineAB { a: m23, b: m41 }),
+            ],
+            elements_to_find: vec![
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::LineAB(LineAB { a: xp2, b: xp3 }),
+                Element::LineAB(LineAB { a: xp3, b: xp4 }),
+                Element::LineAB(LineAB { a: xp4, b: xp1 }),
+            ],
+            action_count: 6,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            ..Self::FULL_WITHOUT_BISECTOR
+        }
+    }
+
+    // 3: Circle3 Circle(c.x=1.110,c.y=0.800,r2=0.816) [1 actions: [3] (0)][pri = 23]
+    // from GivenPoint0, GivenPoint1, and GivenPoint2 (ThreePointActionType(CircleCAB))
+    // 5: Circle5 Circle(c.x=0.510,c.y=0.000,r2=0.204) [1 actions: [5] (0)][pri = 23]
+    // from GivenPoint0, GivenPoint1, and GivenPoint2 (ThreePointActionType(CircleABC))
+    // 6: Line6 Line(nx=-0.000,ny=1.000,d=0.400) [3 actions: [3, 5, 6] (10)][pri = 35]
+    // from GivenPoint1 and x/Circle3/Circle5 (TwoPointActionType(Line))
+    // 7: Line7 Line(nx=-0.000,ny=1.000,d=-0.000) [4 actions: [3, 5, 6, 7] (110)][pri = 28]
+    // from GivenPoint2 and Line6 (PointAndLineActionType(Par))
+    fn parallelogram_by_three_midpoints_6_11_adv_partial() -> ProblemDefinition {
+        let xp1 = pt(0.0, 0.0);
+        let xp2 = pt(0.6, 0.8);
+        let xp3 = pt(1.62, 0.8);
+        let xp4 = pt(1.02, 0.0);
+        let m23 = pt(1.11, 0.8);
+        let m34 = pt(1.32, 0.4);
+        let m41 = pt(0.51, 0.0);
+        let mx12 = pt(0.3, 0.4);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::Point(m23),
+                Element::Point(m34),
+                Element::Point(m41),
+                Element::CircleCP(CircleCP { c: m23, p: mx12 }),
+                Element::CircleCP(CircleCP { c: m41, p: mx12 }),
+            ],
+            elements_to_find: vec![
+                // Element::LineAB(LineAB { a: mx12, b: m34 }),
+                // Element::LineAB(LineAB { a: xp1, b: xp4 }),
+                // Element::LineAB(LineAB { a: xp2, b: xp3 }),
+                Element::LineAB(LineAB { a: xp1, b: xp2 }),
+                Element::LineAB(LineAB { a: xp2, b: xp3 }),
+                Element::LineAB(LineAB { a: xp3, b: xp4 }),
+                Element::LineAB(LineAB { a: xp4, b: xp1 }),
+            ],
+            action_count: 5,
+            multimatch: true,
+            prioritize_low_action_count_shapes: false,
+            // action_types: &[
+            //     ActionType::LINE,
+            //     ActionType::CIRCLE12,
+            //     ActionType::CIRCLE21,
+            //     ActionType::PAR,
+            //     ActionType::CIRCLE_CAB,
+            //     ActionType::CIRCLE_ACB,
+            //     ActionType::CIRCLE_ABC,
+            // ],
             ..Self::FULL_WITHOUT_BISECTOR
         }
     }
@@ -978,11 +1074,13 @@ impl ProblemDefinition {
         let p1 = pt(1.2345, 0.0);
         // tan 75 = sqrt((1 - cos 150) / (1 + cos 150)) = (1 + r3 / 2) / (1/2)
         let px = pt(1.0, 2.0 + 3.0f64.sqrt());
+        let p_additional = pt(0.282349, 0.832847);
         ProblemDefinition {
             given_elements: vec![
                 Element::RayAV(RayAV { a: c, v: p1 }),
                 Element::Point(c),
-                Element::Point(p1),
+                // Element::Point(p1),
+                Element::Point(p_additional),
             ],
             elements_to_find: vec![Element::LineAB(LineAB { a: c, b: px })],
             action_count: 3,
@@ -1506,9 +1604,9 @@ impl ProblemDefinition {
     }
 
     fn triangle_midsegment_9_10() -> ProblemDefinition {
-        let h = 1.65239;
+        let h = 1.05239;
         let x1 = -0.86762;
-        let x2 = 0.52374;
+        let x2 = 0.82374;
         let a = pt(0.0, h);
         let b = pt(x1, 0.0);
         let c = pt(x2, 0.0);
@@ -1525,7 +1623,7 @@ impl ProblemDefinition {
             action_count: 5,
             multimatch: true,
             // prioritize_low_action_count_shapes: false,
-            random_walk_at_n_actions: Some(3),
+            random_walk_at_n_actions: Some(4),
             track_supports_in_rw: true,
             ..Self::BASIC
         }
@@ -1552,14 +1650,87 @@ impl ProblemDefinition {
         }
     }
 
+    // - Circle(c.x=-3.490,c.y=0.000,r2=12.179)
+    // - Circle(c.x=-0.143,c.y=0.990,r2=1.000)
+    // - Circle(c.x=-0.561,c.y=1.898,r2=3.918)
+    // - Circle(c.x=0.515,c.y=0.237,r2=15.350)
+    // - Circle(c.x=-2.065,c.y=3.186,r2=14.411)
+    // - Circle(c.x=-3.353,c.y=-0.385,r2=18.134)
+    // - Circle(c.x=0.785,c.y=0.619,r2=1.103 to 1.103)
+    // - Circle(c.x=-0.043 to -0.043,c.y=-0.027 to -0.027,r2=12.598 to 12.598)
+    // - Circle(c.x=-0.500 to -0.500,c.y=-3.547 to -3.547,r2=12.831 to 12.831)
+    // x^2 + y^2 = 1, (x - X)^2 + y^2 = X^2: 2xX = 1, x = 1/(2X), y = sqrt(1 - 1 / (4X^2))
+
+    // - Circle(c.x=-3.490,c.y=0.000,r2=12.179)
+    // - Circle(c.x=-0.143,c.y=0.990,r2=1.000)
+    // - Circle(c.x=-0.929,c.y=0.371,r2=3.000)
+    // - Circle(c.x=-0.216,c.y=-1.208,r2=1.505)
+    // - Circle(c.x=0.000,c.y=0.000,r2=3.723)
+    // - Circle(c.x=-1.440,c.y=-1.284,r2=1.147)
+    // - Circle(c.x=-0.533 to -0.533,c.y=-1.854 to -1.854,r2=4.585 to 4.585)
+    // - Circle(c.x=-2.173 to -2.173,c.y=-3.232 to -3.232,r2=11.819 to 11.820)
+    fn line_circle_intersection_15_8() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(-3.269845, 0.0);
+        let px1 = pt(-1.0, 0.0);
+        let px2 = pt(1.0, 0.0);
+        let r = FInt::new(1.0);
+        // let cos = 0.763246;
+        // let p_additional = pt(cos, (1.0 - cos * cos).sqrt());
+        let p_additional = pt(0.2347234, 0.4823445);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCR(CircleCR { c, r }),
+                Element::Point(c),
+                Element::Point(p),
+                // Element::Point(p_additional),
+            ],
+            elements_to_find: vec![Element::Point(px1)],
+            action_count: 7,
+            action_types: &[ActionType::CIRCLE12, ActionType::CIRCLE21],
+            multimatch: true,
+            random_walk_at_n_actions: Some(5),
+            ..Self::BASIC
+        }
+    }
+
+    fn line_circle_intersection_15_8_mod() -> ProblemDefinition {
+        let c = pt(0.0, 0.0);
+        let p = pt(-3.269845, 0.0);
+        let px1 = pt(-1.0, 0.0);
+        let px2 = pt(1.0, 0.0);
+        let r = FInt::new(1.0);
+        let circle = CircleCR { c, r }.get_shape();
+        let circle2 = CircleCP { c: p, p: c }.get_shape();
+        let p1 = circle.find_intersection_points(&Shape::Circle(circle2))[1].unwrap();
+        // let cos = 0.763246;
+        // let p_additional = pt(cos, (1.0 - cos * cos).sqrt());
+        let p_additional = pt(0.2347234, 0.4823445);
+        ProblemDefinition {
+            given_elements: vec![
+                Element::CircleCR(CircleCR { c, r }),
+                Element::Point(c),
+                Element::Point(p),
+                // Element::Point(p_additional),
+                Element::CircleCP(CircleCP { c, p }),
+                Element::CircleCP(CircleCP { c: p1, p: c }),
+            ],
+            elements_to_find: vec![Element::Point(px1)],
+            action_count: 5,
+            action_types: &[ActionType::CIRCLE12, ActionType::CIRCLE21],
+            multimatch: true,
+            random_walk_at_n_actions: Some(4),
+            // prioritize_low_action_count_shapes: false,
+            ..Self::BASIC
+        }
+    }
+
     /*
 
     Unsolved problems:
 
     Basic:
 
-    Equilateral triangle in circle (4.4), 6 actions - "all actions explored", solvable in 7 actions (with an additional point)
-    Circumscribed Square (5.8), 11 actions - too large
     Inscribed circle (7.7), 8 actions - too large
     Circle tangent to 3 lines (7.8), 6 actions - tried random walk
     Excircle (7.11), 8 actions
@@ -1568,14 +1739,10 @@ impl ProblemDefinition {
 
     Advanced:
 
-    Parallelogram by 3 midpoints (6.11), 7 actions - solvable in 8 actions
-    Angle of 75 (7.3), 3 actions - "all actions explored", solvable in 4 actions
-
-
     */
 
     pub fn get_problem() -> ProblemDefinition {
-        Self::minimum_perimeter_2_9_7()
+        Self::line_circle_intersection_15_8_mod()
         // Self::circle_tangent_to_three_lines_7_8_rw_alt()
         // Self::parallelogram_by_three_midpoints_6_11_full_partial()
         // Self::midpoint_problem_1_3()
@@ -1594,9 +1761,6 @@ impl ProblemDefinition {
         // Finds a solution with too many actions
         // Self::parallelogram_by_three_midpoints_6_11()
         // Self::angle_of_75_7_3_full()
-
-        // Solved with one more action (required solution probably doesn't exist)
-        // Self::equilateral_triangle_in_circle_problem_4_4()
 
         // Solved problems
         // Self::midpoint_problem_1_3()
@@ -1630,5 +1794,8 @@ impl ProblemDefinition {
         // Solved with random walk
         // Self::circle_tangent_to_square_side_5_10_rw_mod()
         // Self::torricelli_point_8_6_rw()
+        // Self::minimum_perimeter_2_9_7()
+        // Self::equilateral_triangle_in_circle_problem_4_4()
+        // Self::circumscribed_square_5_8_mod()
     }
 }

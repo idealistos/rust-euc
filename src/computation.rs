@@ -34,7 +34,7 @@ mod print;
 mod random_walk;
 
 const GIVEN: i32 = -1;
-const RANDOM_WALK_LIMIT: u32 = 50000000;
+const RANDOM_WALK_LIMIT: u32 = 500000000;
 
 #[derive(Debug)]
 struct PointOrigin {
@@ -101,6 +101,18 @@ impl<'a> Computation<'a> {
         } else {
             self.deps_combinations[(deps >> 40) as usize].len_u32() + lower_mask.count_ones()
         }
+    }
+
+    fn print_deps(&self, deps: u64) -> String {
+        let part2: Vec<u32> = self.deps_combinations[(deps >> 40) as usize]
+            .iter()
+            .map(|x| x + 39)
+            .collect();
+        let mut part1: Vec<u32> = (0..40)
+            .filter_map(|i| if deps & (1 << i) != 0 { Some(i) } else { None })
+            .collect();
+        part1.extend(part2);
+        format!("{:?}", part1)
     }
 
     fn get_combined_deps_count(&self, deps1: u64, deps2: u64) -> u32 {
@@ -441,7 +453,10 @@ impl<'a> Computation<'a> {
 
         if shortest_union.count_ones() <= self.problem.action_count {
             self.solution_deps = Some(self.decompress(shortest_union, all_relevant_deps));
-            println!("Solution deps: {:b}", self.solution_deps.unwrap());
+            println!(
+                "Solution deps: {}",
+                self.print_deps(self.solution_deps.unwrap())
+            );
         }
     }
 
@@ -650,7 +665,7 @@ impl<'a> Computation<'a> {
         if self.found_shapes.contains(shape) {
             self.check_multimatch_solution_found();
         }
-        for i in 0..index {
+        for i in 0..current_index {
             let shape_origin = &self.shape_origins[i as usize];
             let deps_count =
                 self.get_combined_deps_count(combined_deps_with_index, shape_origin.deps);
@@ -670,7 +685,7 @@ impl<'a> Computation<'a> {
         }
         if shape.get_direction().is_some() && self.problem.has_point_and_line_actions() {
             for i in 0..self.point_origins.len_i32() {
-                let maybe_actions = Action::check_action_point_and_line(self, i, index);
+                let maybe_actions = Action::check_action_point_and_line(self, i, current_index);
                 for maybe_action in maybe_actions {
                     match maybe_action {
                         Some(action) => self.queue.push(action),
@@ -683,7 +698,7 @@ impl<'a> Computation<'a> {
             for i1 in 0..self.point_origins.len_i32() {
                 for i2 in (i1 + 1)..self.point_origins.len_i32() {
                     let maybe_actions =
-                        Action::check_action_two_point_and_line(self, i1, i2, index);
+                        Action::check_action_two_point_and_line(self, i1, i2, current_index);
                     for maybe_action in maybe_actions {
                         match maybe_action {
                             Some(action) => self.queue.push(action),
@@ -729,6 +744,7 @@ impl<'a> Computation<'a> {
         let mut rw_queue = Vec::new();
         for i in 0..1000000 {
             if self.queue.is_empty() {
+                // self.print_state();
                 self.draw_state("final.svg".to_string(), 5.0, HashSet::new());
                 println!("All actions explored");
                 break;
@@ -806,6 +822,7 @@ impl<'a> Computation<'a> {
             let limit = RANDOM_WALK_LIMIT / random_walks.len_u32();
             let rw_results: Vec<RandomWalkSolution> = random_walks
                 .par_iter()
+                // .iter()
                 .filter_map(|rw| rw.run_iterations(limit))
                 .collect();
             println!(

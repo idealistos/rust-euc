@@ -19,6 +19,7 @@ pub struct RandomWalkParent<'a> {
     shapes_to_find: Vec<Shape>,
     points_to_find: HashSet2<Point>,
     solution_found: RwLock<bool>,
+    actions: Vec<ActionType>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -73,6 +74,10 @@ impl FData {
             let points = f_shape.find_intersection_points(shape);
             for j in 0..2 {
                 if let Some(point) = points[j] {
+                    if !point.well_formed() {
+                        println!("Ignoring {} because it isn't well-formed", point);
+                        continue;
+                    }
                     let i_found = self.f_supports[0..self.size]
                         .iter()
                         .position(|&pt| pt == point)
@@ -93,9 +98,9 @@ impl FData {
                             self.f_state_1 = match self.f_state_1 {
                                 FSupportState::AllFound => FSupportState::AllFound,
                                 FSupportState::NeedOne(_) => {
-                                    println!("Two supports found for {f_shape}");
-                                    println!("Shape: {shape}");
-                                    println!("Alt line: {:?}", self.f_alt_lines[i_found]);
+                                    // println!("Two supports found for {f_shape}");
+                                    // println!("Shape: {shape}");
+                                    // println!("Alt line: {:?}", self.f_alt_lines[i_found]);
                                     FSupportState::AllFound
                                 }
                                 FSupportState::NeedBoth => FSupportState::NeedOne(i_found),
@@ -176,7 +181,7 @@ impl<'a> RandomWalk<'a> {
                     Some(shape) if shape.well_formed() => {
                         let mut has_same = false;
                         for i1 in 0..added_shape_count {
-                            if shapes[i1 as usize] == shape {
+                            if shapes[i1 as usize].almost_equals(&shape) {
                                 has_same = true;
                                 break;
                             }
@@ -243,6 +248,13 @@ impl<'a> RandomWalk<'a> {
                 "Running random walk {} with limit = {}",
                 self.random_walk_index, limit
             );
+        }
+        if self.initial_shapes.len_u32()
+            != self.parent.given_shape_count + self.parent.problem.random_walk_at_n_actions.unwrap()
+                - 1
+        {
+            println!("Initial shapes mismatch");
+            return None;
         }
         let mut shapes = [self.initial_shapes[0]; 20];
         for i in 0..self.initial_shapes.len() {
@@ -424,8 +436,13 @@ impl<'a> RandomWalk<'a> {
     }
 
     pub fn get_shape(&self, points: &[Point; 2], i_action: u32) -> Option<Shape> {
-        let action_type = unsafe { transmute(i_action as i8) };
-        Action::create_two_point_element(&points[0], &points[1], action_type).get_shape()
+        match self.parent.actions[i_action as usize] {
+            ActionType::TwoPointActionType(two_point_action_type) => {
+                Action::create_two_point_element(&points[0], &points[1], two_point_action_type)
+                    .get_shape()
+            }
+            _ => panic!(),
+        }
     }
 }
 
@@ -479,6 +496,7 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
             let value = (i0 - 1) + NEW_SHAPE_MULTIPLIER * (i - (i0 - 1));
             pt_index_counts.push(fixed_points.len_u32() + value * (i - 1) * 2);
         }
+        let actions: Vec<ActionType> = self.problem.action_types.iter().map(|&x| x).collect();
         RandomWalkParent {
             problem: &self.problem,
             pt_index_counts,
@@ -487,6 +505,7 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
             shapes_to_find,
             points_to_find,
             solution_found: RwLock::new(false),
+            actions,
         }
     }
 
@@ -527,16 +546,11 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
             deps.push(action.get_action_deps(&self));
             last_shapes.push(action.shape);
         }
-        shapes_seen_so_far = HashSet2::new();
         for i in 0..self.shape_origins.len() {
             let shape_origin = &self.shape_origins[i];
             if matches!(shape_origin.element_link, ElementLink::GivenElement { .. }) {
                 continue;
             }
-            if shapes_seen_so_far.contains(shape_origin.get_shape()) {
-                continue;
-            }
-            shapes_seen_so_far.insert(shape_origin.get_shape());
             let shape_deps = shape_origin.deps;
             for j in 0..random_walks.len() {
                 if self.requires_deps(&deps[j], shape_deps) {
@@ -560,7 +574,7 @@ impl<'a> RandomWalkProcessing<'a> for Computation<'a> {
                 });
         println!("{:?}", freqs);
         println!("Some random walk:",);
-        for shape in &random_walks[random_walks.len() / 2].initial_shapes {
+        for shape in &random_walks[43].initial_shapes {
             println!("  - {}", shape);
         }
         random_walks

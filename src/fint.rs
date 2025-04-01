@@ -1,4 +1,5 @@
 use std::{
+    cmp::max,
     fmt::{Display, Formatter, Result},
     hash::Hasher,
     ops,
@@ -104,6 +105,27 @@ impl FInt {
 
     pub fn precise(&self) -> bool {
         self.well_formed() && self.1 - self.0 < f64::max(1e-5 * self.0.abs(), 1e-10)
+    }
+
+    pub fn almost_equals(&self, x: FInt) -> bool {
+        if (self.0 - x.0).abs() > 0.001
+            && x.0.abs() < 1000.0
+            && self.1 - self.0 < 0.001
+            && x.1 - x.0 < 0.001
+        {
+            return false;
+        }
+        let m1 = self.midpoint();
+        let m2 = x.midpoint();
+        let mut delta = f64::max(0.001, f64::max(3.0 * (self.1 - self.0), 3.0 * (x.1 - x.0)));
+        let max_abs = f64::max(
+            f64::max(self.0.abs(), self.1.abs()),
+            f64::max(x.0.abs(), x.1.abs()),
+        );
+        if max_abs > 1000.0 {
+            delta *= max_abs / 1000.0;
+        }
+        (m1 - m2).abs() < delta
     }
 }
 

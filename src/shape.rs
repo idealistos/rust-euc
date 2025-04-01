@@ -64,6 +64,10 @@ impl Point {
     pub fn is_collinear(&self, point: &Point) -> bool {
         self.0 * point.1 - self.1 * point.0 == FInt::new(0.0)
     }
+
+    fn almost_equals(&self, point: &Point) -> bool {
+        self.0.almost_equals(point.0) && self.1.almost_equals(point.1)
+    }
 }
 
 pub trait ShapeTrait: Display {
@@ -188,6 +192,15 @@ impl Line {
     fn get_direction(&self) -> Option<Point> {
         Some(Point(self.ny.negate(), self.nx))
     }
+
+    fn almost_equals(&self, line: &Line) -> bool {
+        (self.nx.almost_equals(line.nx)
+            && self.ny.almost_equals(line.ny)
+            && self.d.almost_equals(line.d))
+            || (self.nx.almost_equals(line.nx.negate())
+                && self.ny.almost_equals(line.ny.negate())
+                && self.d.almost_equals(line.d.negate()))
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -290,6 +303,10 @@ impl Circle {
                 (m * cy - det_sqrt * cx) * cn_inv_neg + self.c.1,
             )),
         ];
+    }
+
+    fn almost_equals(&self, circle: &Circle) -> bool {
+        self.c.almost_equals(&circle.c) && self.r2.almost_equals(circle.r2)
     }
 }
 
@@ -437,6 +454,10 @@ impl Ray {
         return (proj1 - proj).always_positive()
             || (v.0 * self.v.0 + v.1 * self.v.1).always_positive();
     }
+
+    fn almost_equals(&self, ray: &Ray) -> bool {
+        self.a.almost_equals(&ray.a) && self.v.almost_equals(&ray.v)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -574,6 +595,11 @@ impl Segment {
         let proj2 = self.b.0 * v.0 + self.b.1 * v.1;
         return (proj1 - proj).always_positive() || (proj2 - proj).always_positive();
     }
+
+    // We don't take into account that a and b can be reversed
+    fn almost_equals(&self, segment: &Segment) -> bool {
+        self.a.almost_equals(&segment.a) && self.b.almost_equals(&segment.b)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -670,6 +696,16 @@ impl Shape {
             Shape::Ray(ray) => ray.intersects_with_collinear_ray(point, v),
             Shape::Segment(segment) => segment.intersects_with_collinear_ray(point, v),
             Shape::Circle(_circle) => false,
+        }
+    }
+
+    pub fn almost_equals(&self, shape: &Shape) -> bool {
+        match (self, shape) {
+            (Shape::Line(x), Shape::Line(y)) => x.almost_equals(y),
+            (Shape::Circle(x), Shape::Circle(y)) => x.almost_equals(y),
+            (Shape::Ray(x), Shape::Ray(y)) => x.almost_equals(y),
+            (Shape::Segment(x), Shape::Segment(y)) => x.almost_equals(y),
+            _ => false,
         }
     }
 }

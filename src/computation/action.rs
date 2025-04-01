@@ -119,7 +119,7 @@ impl Action {
         point3: &Point,
         action_type: ThreePointActionType,
     ) -> Option<Element> {
-        if point1 == point2 || point2 == point3 || point1 == point2 {
+        if point1 == point2 || point2 == point3 || point1 == point3 {
             return None;
         }
         match action_type {
@@ -690,32 +690,33 @@ impl PriorityComputation for TwoPointActionType {
                 priority += 5;
             }
         }
-        if comp.problem.find_all_solutions {
-            for shape in &comp.found_shapes {
-                if shape.contains_point(&origin1.point) {
-                    priority += 5;
-                }
-                if shape.contains_point(&origin2.point) {
-                    priority += 5;
-                }
+        let to_add = if comp.problem.find_all_solutions {
+            5
+        } else {
+            2
+        };
+        for shape in &comp.found_shapes {
+            if shape.contains_point(&origin1.point) {
+                priority += to_add;
+            }
+            if shape.contains_point(&origin2.point) {
+                priority += to_add;
             }
         }
         if comp.shapes_to_find.contains(*shape) {
             priority += 20;
         }
-        if comp.problem.find_all_solutions && comp.found_shapes.contains(*shape) {
-            priority += 20;
+        if comp.found_shapes.contains(*shape) {
+            priority += 4 * to_add;
         }
         for point in &comp.points_to_find {
             if shape.contains_point(&point) {
                 priority += 5;
             }
         }
-        if comp.problem.find_all_solutions {
-            for point in &comp.found_points {
-                if shape.contains_point(&point) {
-                    priority += 5;
-                }
+        for point in &comp.found_points {
+            if shape.contains_point(&point) {
+                priority += to_add;
             }
         }
         priority
@@ -769,9 +770,19 @@ impl PriorityComputation for PointAndLineActionType {
         if comp.found_shapes.contains(line_origin.get_shape()) {
             priority += 1;
         }
+        let to_add = if comp.problem.find_all_solutions {
+            5
+        } else {
+            2
+        };
         for shape in &comp.shapes_to_find {
             if shape.contains_point(&point_origin.point) {
                 priority += 5;
+            }
+        }
+        for shape in &comp.found_shapes {
+            if shape.contains_point(&point_origin.point) {
+                priority += to_add;
             }
         }
         for point in &comp.points_to_find {
@@ -780,12 +791,26 @@ impl PriorityComputation for PointAndLineActionType {
                 priority += 5;
             }
         }
+        for point in &comp.found_points {
+            let line_shape = line_origin.get_shape();
+            if line_shape.contains_point(point) {
+                priority += to_add;
+            }
+        }
         if comp.shapes_to_find.contains(*shape) {
             priority += 20;
+        }
+        if comp.found_shapes.contains(*shape) {
+            priority += 4 * to_add;
         }
         for point in &comp.points_to_find {
             if shape.contains_point(&point) {
                 priority += 5;
+            }
+        }
+        for point in &comp.found_points {
+            if shape.contains_point(&point) {
+                priority += to_add;
             }
         }
         priority
@@ -818,6 +843,11 @@ impl PriorityComputation for ThreePointActionType {
         let origin1 = &comp.point_origins[point_index_1 as usize];
         let origin2 = &comp.point_origins[point_index_2 as usize];
         let origin3 = &comp.point_origins[extra_index as usize];
+        let to_add = if comp.problem.find_all_solutions {
+            5
+        } else {
+            2
+        };
         let mut found_shape_mask =
             origin1.found_shape_mask | origin2.found_shape_mask | origin3.found_shape_mask;
         match comp.shape_to_find_mask_by_shape.get(*shape) {
@@ -857,9 +887,17 @@ impl PriorityComputation for ThreePointActionType {
         if comp.shapes_to_find.contains(*shape) {
             priority += 20;
         }
+        if comp.found_shapes.contains(*shape) {
+            priority += 4 * to_add;
+        }
         for point in &comp.points_to_find {
             if shape.contains_point(&point) {
                 priority += 5;
+            }
+        }
+        for point in &comp.found_points {
+            if shape.contains_point(&point) {
+                priority += to_add;
             }
         }
         priority

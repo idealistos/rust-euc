@@ -109,7 +109,10 @@ impl<'a> DrawState for Computation<'a> {
     }
 
     fn draw_solution(&mut self, filename: String, hw: f64) {
-        let deps_list = self.get_solution_deps_list();
+        let deps_list = match self.solution_deps {
+            None => self.get_solution_deps_list(),
+            Some(deps) => HashSet::from([deps]),
+        };
         self.draw_state(filename, hw, deps_list)
     }
 
@@ -232,15 +235,25 @@ mod private {
                         .set("stroke", color)
                         .set("stroke-width", stroke_width),
                 ),
-                Shape::Circle(circle) => document.add(
-                    svg::node::element::Circle::new()
-                        .set("cx", Self::to_svg(circle.c.0, hw))
-                        .set("cy", Self::to_svg_flip(circle.c.1, hw))
-                        .set("r", Self::to_svg(circle.r2.sqrt() - FInt::new(hw), hw))
-                        .set("fill", "none")
-                        .set("stroke", color)
-                        .set("stroke-width", stroke_width),
-                ),
+                Shape::Circle(circle) => document
+                    .add(
+                        svg::node::element::Circle::new()
+                            .set("cx", Self::to_svg(circle.c.0, hw))
+                            .set("cy", Self::to_svg_flip(circle.c.1, hw))
+                            .set("r", Self::to_svg(circle.r2.sqrt() - FInt::new(hw), hw))
+                            .set("fill", "none")
+                            .set("stroke", color)
+                            .set("stroke-width", stroke_width),
+                    )
+                    .add(
+                        svg::node::element::Circle::new()
+                            .set("cx", Self::to_svg(circle.c.0, hw))
+                            .set("cy", Self::to_svg_flip(circle.c.1, hw))
+                            .set("r", 2)
+                            .set("fill", "none")
+                            .set("stroke", color)
+                            .set("stroke-width", stroke_width),
+                    ),
             }
         }
     }

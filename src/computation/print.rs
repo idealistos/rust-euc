@@ -22,12 +22,12 @@ impl<'a> PrintState for Computation<'a> {
                 ""
             };
             println!(
-                "{}: {} {} [{} actions: {:b} ({:b})] {}",
+                "{}: {} {} [{} actions: {} ({:b})] {}",
                 i,
                 self.get_point_name(i),
                 origin.point,
                 self.get_deps_count(origin.deps),
-                origin.deps,
+                self.print_deps(origin.deps),
                 origin.found_shape_mask,
                 found_part,
             );
@@ -155,12 +155,12 @@ mod private {
                     ""
                 };
                 println!(
-                    "{}: {} {} [{} actions: {:b} ({:b})]{}{}",
+                    "{}: {} {} [{} actions: {} ({:b})]{}{}",
                     i,
                     self.get_shape_name(i),
                     origin.get_shape(),
                     self.get_deps_count(origin.deps),
-                    origin.deps,
+                    self.print_deps(origin.deps),
                     origin.found_shape_mask,
                     from_part,
                     found_part,
